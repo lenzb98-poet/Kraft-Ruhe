@@ -49,7 +49,6 @@
     --accent-soft: #ede8dd;
     --dot-filled: #b7a98f;
     --dot-empty: #e8e3d9;
-    --danger: none;
   }
 
   * { box-sizing: border-box; }
@@ -78,12 +77,6 @@
     border-radius: 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
     padding: 28px 22px 24px;
-    transition: transform 0.6s cubic-bezier(.55,0,.55,1), opacity 0.6s ease;
-  }
-
-  .sheet.leaving {
-    transform: translateY(120vh) rotate(2deg);
-    opacity: 0;
   }
 
   .sheet.entering {
@@ -91,8 +84,20 @@
   }
 
   @keyframes riseIn {
-    from { transform: translateY(24px); opacity: 0; }
+    from { transform: translateY(20px); opacity: 0; }
     to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Das abgerissene Blatt waehrend des Falls */
+  .sheet.flying {
+    z-index: 60;
+    margin: 0;
+    pointer-events: none;
+    box-shadow: none;
+    border-radius: 0;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.13));
+    transform-origin: 50% 0%;
+    will-change: transform;
   }
 
   .date {
@@ -105,9 +110,18 @@
   .date-sub {
     font-size: 0.85rem;
     color: var(--ink-soft);
-    margin: 0 0 22px;
+    margin: 0;
     text-transform: capitalize;
   }
+
+  .unit-hint {
+    font-size: 0.78rem;
+    color: var(--accent);
+    margin-top: 6px;
+    min-height: 1em;
+  }
+
+  .sheet-body { margin-top: 22px; }
 
   .rows {
     display: flex;
@@ -136,17 +150,9 @@
     min-width: 0;
   }
 
-  .row input::placeholder {
-    color: #c9c3b6;
-  }
-
-  .row input:focus {
-    border-bottom-color: var(--accent);
-  }
-
-  .row .ex-wrap {
-    position: relative;
-  }
+  .row input::placeholder { color: #c9c3b6; }
+  .row input:focus { border-bottom-color: var(--accent); }
+  .row .ex-wrap { position: relative; }
 
   .row-remove {
     background: none;
@@ -213,13 +219,9 @@
     font-size: 0.88rem;
     cursor: pointer;
   }
-  .suggestions div:hover, .suggestions div.active {
-    background: var(--accent-soft);
-  }
+  .suggestions div:hover, .suggestions div.active { background: var(--accent-soft); }
 
-  .feeling-wrap {
-    margin-top: 20px;
-  }
+  .feeling-wrap { margin-top: 20px; }
   .feeling-label {
     font-size: 0.75rem;
     color: var(--ink-soft);
@@ -232,7 +234,7 @@
     border: none;
     border-bottom: 1px solid var(--line);
     background: transparent;
-    font-size: 1.05rem;
+    font-size: 16px;
     padding: 8px 2px;
     outline: none;
     font-family: inherit;
@@ -257,20 +259,24 @@
   }
   .finish-btn:active { opacity: 0.85; }
 
-  .done-note {
+  .empty-hint {
     text-align: center;
     color: var(--ink-soft);
-    font-size: 0.9rem;
-    margin-top: 18px;
+    font-size: 0.82rem;
+    margin-top: 12px;
+    min-height: 1em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
+  .empty-hint.show { opacity: 1; }
 
-  /* chain of weeks */
+  /* Kette der letzten Wochen */
   .chain-section {
     width: 100%;
     max-width: 480px;
     margin-top: 40px;
   }
-  .chain-title {
+  .chain-title, .archive-title {
     font-size: 0.75rem;
     color: var(--ink-soft);
     text-transform: uppercase;
@@ -291,11 +297,55 @@
     background: var(--dot-empty);
     flex-shrink: 0;
   }
-  .dot.filled {
-    background: var(--dot-filled);
+  .dot.filled { background: var(--dot-filled); }
+  .dot.today { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  /* Ablage der abgerissenen Blaetter */
+  .archive {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 38px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
-  .dot.today {
-    box-shadow: 0 0 0 3px var(--accent-soft);
+  .archive:empty { display: none; }
+
+  .page-card {
+    background: var(--paper);
+    padding: 20px 20px 16px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.06));
+  }
+  @keyframes settle {
+    from { transform: translateY(-7px) rotate(-0.5deg); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+  .page-card.settling { animation: settle 0.45s ease both; }
+
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .page-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.92rem;
+    padding: 3px 0;
+  }
+  .page-line .pl-ex { color: var(--ink); }
+  .page-line .pl-num { color: var(--ink-soft); white-space: nowrap; }
+  .page-feeling {
+    margin-top: 10px;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-style: italic;
   }
 
   .export-bar {
@@ -322,6 +372,10 @@
     .row { grid-template-columns: 1fr 52px 46px 22px; }
     .col-labels { grid-template-columns: 1fr 52px 46px 22px; }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sheet.entering, .page-card.settling { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -329,29 +383,34 @@
 <div class="sheet" id="sheet">
   <div class="date" id="dateBig"></div>
   <div class="date-sub" id="dateSub"></div>
+  <div class="unit-hint" id="unitHint"></div>
 
-  <div class="col-labels">
-    <span>Übung</span><span>kg</span><span>Wdh.</span><span></span>
+  <div class="sheet-body">
+    <div class="col-labels">
+      <span>&Uuml;bung</span><span>kg</span><span>Wdh.</span><span></span>
+    </div>
+    <div class="rows" id="rows"></div>
+
+    <button class="add-btn" id="addRowBtn" type="button">
+      <span class="plus-circle">+</span> &Uuml;bung hinzuf&uuml;gen
+    </button>
+
+    <div class="feeling-wrap">
+      <div class="feeling-label">Wie war's</div>
+      <input class="feeling-input" id="feelingInput" type="text" placeholder="ein Wort reicht&hellip;" maxlength="60">
+    </div>
+
+    <button class="finish-btn" id="finishBtn" type="button">Einheit abschlie&szlig;en</button>
+    <div class="empty-hint" id="emptyHint">Noch nichts eingetragen.</div>
   </div>
-  <div class="rows" id="rows"></div>
-
-  <button class="add-btn" id="addRowBtn" type="button">
-    <span class="plus-circle">+</span> Übung hinzufügen
-  </button>
-
-  <div class="feeling-wrap">
-    <div class="feeling-label">Wie war's</div>
-    <input class="feeling-input" id="feelingInput" type="text" placeholder="ein Wort reicht…" maxlength="60">
-  </div>
-
-  <button class="finish-btn" id="finishBtn" type="button">Tag abschließen</button>
-  <div class="done-note" id="doneNote" style="display:none;">Für heute festgehalten.</div>
 </div>
 
 <div class="chain-section">
   <div class="chain-title">letzte Wochen</div>
   <div id="chain"></div>
 </div>
+
+<div class="archive" id="archive"></div>
 
 <div class="export-bar">
   <button class="export-btn" id="exportJson" type="button">Export JSON</button>
@@ -365,49 +424,76 @@
   var STORAGE_KEY = "kraftRuhe.entries";
   var EXERCISES_KEY = "kraftRuhe.exerciseNames";
 
-  function todayKey(d) {
+  var MONTHS = ["Januar","Februar","März","April","Mai","Juni",
+                "Juli","August","September","Oktober","November","Dezember"];
+  var DAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  function dayKey(d) {
     d = d || new Date();
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var day = String(d.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + day;
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
   }
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  }
+
+  // ---------- Speicher ----------
 
   function loadEntries() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : {};
-    } catch (e) {
-      return {};
-    }
+    } catch (e) { return {}; }
   }
 
-  function saveEntries(entries) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  function saveEntries(data) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  // Alte Form war { rows, feeling, done } - ein Eintrag pro Tag.
+  // Neu ist { sessions: [...], draft: {...} } - mehrere Einheiten pro Tag.
+  function migrate(data) {
+    var heute = dayKey();
+    var touched = false;
+    Object.keys(data).forEach(function (k) {
+      var old = data[k];
+      if (!old || old.sessions) return;
+      var rows = old.rows || [];
+      var feeling = old.feeling || "";
+      var hasContent = rows.length > 0 || !!feeling;
+      var next = { sessions: [], draft: { rows: [], feeling: "" } };
+      if (hasContent && (old.done || k !== heute)) {
+        // Abgeschlossen, oder ein vergangener Tag - als Einheit behalten,
+        // damit der Punkt in der Kette nicht verschwindet.
+        next.sessions.push({ rows: rows, feeling: feeling, closedAt: null });
+      } else if (hasContent) {
+        next.draft = { rows: rows, feeling: feeling };
+      }
+      data[k] = next;
+      touched = true;
+    });
+    if (touched) saveEntries(data);
+    return data;
   }
 
   function loadExerciseNames() {
     try {
       var raw = localStorage.getItem(EXERCISES_KEY);
       return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveExerciseNames(list) {
-    localStorage.setItem(EXERCISES_KEY, JSON.stringify(list));
+    } catch (e) { return []; }
   }
 
   function pushExerciseName(name) {
-    name = name.trim();
+    name = (name || "").trim();
     if (!name) return;
     var list = loadExerciseNames();
     var lower = name.toLowerCase();
     list = list.filter(function (n) { return n.toLowerCase() !== lower; });
     list.unshift(name);
     if (list.length > 30) list = list.slice(0, 30);
-    saveExerciseNames(list);
+    try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(list)); } catch (e) {}
   }
 
   function normalizeNumberInput(str) {
@@ -415,98 +501,80 @@
     return str.trim().replace(",", ".");
   }
 
-  var entries = loadEntries();
-  var key = todayKey();
-  var today = entries[key] || { rows: [], feeling: "", done: false };
+  var entries = migrate(loadEntries());
+  var todayK = dayKey();
+
+  function todayEntry() {
+    if (!entries[todayK]) entries[todayK] = { sessions: [], draft: { rows: [], feeling: "" } };
+    return entries[todayK];
+  }
+
+  // ---------- Elemente ----------
 
   var sheet = document.getElementById("sheet");
   var rowsEl = document.getElementById("rows");
   var addRowBtn = document.getElementById("addRowBtn");
   var feelingInput = document.getElementById("feelingInput");
   var finishBtn = document.getElementById("finishBtn");
-  var doneNote = document.getElementById("doneNote");
-  var dateBig = document.getElementById("dateBig");
-  var dateSub = document.getElementById("dateSub");
-
-  function formatDateBig(d) {
-    var months = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    return d.getDate() + ". " + months[d.getMonth()];
-  }
-  function formatDateSub(d) {
-    var days = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
-    return days[d.getDay()] + ", " + d.getFullYear();
-  }
+  var emptyHint = document.getElementById("emptyHint");
+  var unitHint = document.getElementById("unitHint");
+  var chainEl = document.getElementById("chain");
+  var archiveEl = document.getElementById("archive");
 
   var now = new Date();
-  dateBig.textContent = formatDateBig(now);
-  dateSub.textContent = formatDateSub(now);
+  document.getElementById("dateBig").textContent = now.getDate() + ". " + MONTHS[now.getMonth()];
+  document.getElementById("dateSub").textContent = DAYS[now.getDay()] + ", " + now.getFullYear();
 
-  function persistToday() {
-    entries[key] = today;
-    saveEntries(entries);
-  }
+  // ---------- Zeilen ----------
 
-  function collectRowsFromDom() {
-    var rows = [];
+  function collectRows() {
+    var out = [];
     rowsEl.querySelectorAll(".row").forEach(function (rowEl) {
       var ex = rowEl.querySelector(".ex-input").value.trim();
       var weight = rowEl.querySelector(".w-input").value.trim();
       var reps = rowEl.querySelector(".r-input").value.trim();
-      if (ex || weight || reps) {
-        rows.push({ exercise: ex, weight: weight, reps: reps });
-      }
+      if (ex || weight || reps) out.push({ exercise: ex, weight: weight, reps: reps });
     });
-    return rows;
+    return out;
   }
 
-  function autosave() {
-    today.rows = collectRowsFromDom();
-    today.feeling = feelingInput.value.trim();
-    persistToday();
-  }
-
-  function closeAllSuggestions() {
-    document.querySelectorAll(".suggestions").forEach(function (s) {
-      s.classList.remove("show");
-    });
+  function saveDraft() {
+    var entry = todayEntry();
+    entry.draft = { rows: collectRows(), feeling: feelingInput.value.trim() };
+    saveEntries(entries);
+    if (emptyHint.classList.contains("show")) emptyHint.classList.remove("show");
   }
 
   function createRow(data) {
-    data = data || { exercise: "", weight: "", reps: "" };
+    data = data || {};
     var row = document.createElement("div");
     row.className = "row";
     row.innerHTML =
       '<div class="ex-wrap">' +
-        '<input class="ex-input" type="text" placeholder="Übung" autocomplete="off" tabindex="0">' +
+        '<input class="ex-input" type="text" placeholder="Übung" autocomplete="off">' +
         '<div class="suggestions"></div>' +
       '</div>' +
-      '<input class="w-input" type="text" inputmode="decimal" placeholder="kg" tabindex="0">' +
-      '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh." tabindex="0">' +
+      '<input class="w-input" type="text" inputmode="decimal" placeholder="kg">' +
+      '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh.">' +
       '<button type="button" class="row-remove" title="entfernen">×</button>';
 
     var exInput = row.querySelector(".ex-input");
     var wInput = row.querySelector(".w-input");
     var rInput = row.querySelector(".r-input");
     var suggBox = row.querySelector(".suggestions");
-    var removeBtn = row.querySelector(".row-remove");
 
     exInput.value = data.exercise || "";
     wInput.value = data.weight || "";
     rInput.value = data.reps || "";
 
     function renderSuggestions() {
-      var names = loadExerciseNames();
       var q = exInput.value.trim().toLowerCase();
-      var filtered = q
+      var names = loadExerciseNames();
+      var filtered = (q
         ? names.filter(function (n) { return n.toLowerCase().indexOf(q) === 0; })
-        : names;
-      filtered = filtered.slice(0, 6);
-      if (!filtered.length) {
-        suggBox.classList.remove("show");
-        suggBox.innerHTML = "";
-        return;
-      }
+        : names).slice(0, 6);
       suggBox.innerHTML = "";
+      if (!filtered.length) { suggBox.classList.remove("show"); return; }
       filtered.forEach(function (n) {
         var item = document.createElement("div");
         item.textContent = n;
@@ -515,7 +583,7 @@
           exInput.value = n;
           suggBox.classList.remove("show");
           wInput.focus();
-          autosave();
+          saveDraft();
         });
         suggBox.appendChild(item);
       });
@@ -523,128 +591,318 @@
     }
 
     exInput.addEventListener("focus", renderSuggestions);
-    exInput.addEventListener("input", function () {
-      renderSuggestions();
-      autosave();
-    });
+    exInput.addEventListener("input", function () { renderSuggestions(); saveDraft(); });
     exInput.addEventListener("blur", function () {
       setTimeout(function () { suggBox.classList.remove("show"); }, 120);
-    });
-
-    wInput.addEventListener("input", function () {
-      autosave();
-    });
-    wInput.addEventListener("blur", function () {
-      wInput.value = normalizeNumberInput(wInput.value);
-      autosave();
-    });
-
-    rInput.addEventListener("input", autosave);
-    rInput.addEventListener("blur", autosave);
-
-    exInput.addEventListener("blur", function () {
       if (exInput.value.trim()) pushExerciseName(exInput.value.trim());
     });
 
-    removeBtn.addEventListener("click", function () {
+    wInput.addEventListener("input", saveDraft);
+    wInput.addEventListener("blur", function () {
+      wInput.value = normalizeNumberInput(wInput.value);
+      saveDraft();
+    });
+
+    rInput.addEventListener("input", saveDraft);
+    rInput.addEventListener("blur", saveDraft);
+
+    row.querySelector(".row-remove").addEventListener("click", function () {
       row.remove();
-      if (!rowsEl.children.length) addRow();
-      autosave();
+      if (!rowsEl.children.length) createRow();
+      saveDraft();
     });
 
     rowsEl.appendChild(row);
     return row;
   }
 
-  function addRow(data, focus) {
-    var row = createRow(data);
-    if (focus) {
-      row.querySelector(".ex-input").focus();
-    }
-    return row;
+  function resetSheet() {
+    rowsEl.innerHTML = "";
+    createRow();
+    feelingInput.value = "";
+    emptyHint.classList.remove("show");
+    updateUnitHint();
+  }
+
+  function updateUnitHint() {
+    var n = todayEntry().sessions.length;
+    unitHint.textContent = n === 0 ? "" : (n + 1) + ". Einheit";
   }
 
   addRowBtn.addEventListener("click", function () {
-    addRow(null, true);
+    createRow().querySelector(".ex-input").focus();
+  });
+  feelingInput.addEventListener("input", saveDraft);
+  feelingInput.addEventListener("blur", saveDraft);
+  window.addEventListener("beforeunload", saveDraft);
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".ex-wrap")) {
+      document.querySelectorAll(".suggestions").forEach(function (s) { s.classList.remove("show"); });
+    }
   });
 
-  // initial rows
-  if (today.rows && today.rows.length) {
-    today.rows.forEach(function (r) { addRow(r); });
-  } else {
-    addRow();
+  // ---------- Abgerissene Blaetter ----------
+
+  // Zackenkante oben - jedes Blatt reisst ein bisschen anders.
+  function tornClip() {
+    var pts = [];
+    var teeth = 22;
+    for (var i = 0; i <= teeth; i++) {
+      var x = (i / teeth) * 100;
+      var y = (i % 2 === 0) ? (Math.random() * 1.5) : (4.5 + Math.random() * 5);
+      pts.push(x.toFixed(2) + "% " + y.toFixed(1) + "px");
+    }
+    pts.push("100% 100%", "0% 100%");
+    return "polygon(" + pts.join(",") + ")";
   }
-  feelingInput.value = today.feeling || "";
 
-  if (today.done) {
-    finishBtn.disabled = true;
-    finishBtn.textContent = "Tag abgeschlossen";
-    finishBtn.style.opacity = "0.6";
-    doneNote.style.display = "block";
+  function formatDayLabel(k) {
+    var parts = k.split("-");
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    if (k === todayK) return "heute";
+    return DAYS[d.getDay()].slice(0, 2) + ", " + d.getDate() + ". " + MONTHS[d.getMonth()];
   }
 
-  finishBtn.addEventListener("click", function () {
-    autosave();
-    today.done = true;
-    persistToday();
+  function makeCard(key, session) {
+    var card = document.createElement("div");
+    card.className = "page-card";
+    card.style.clipPath = tornClip();
 
-    sheet.classList.add("leaving");
-    finishBtn.disabled = true;
-    finishBtn.textContent = "Tag abgeschlossen";
-    doneNote.style.display = "block";
+    var head = document.createElement("div");
+    head.className = "page-head";
+    var left = document.createElement("span");
+    left.textContent = formatDayLabel(key);
+    var right = document.createElement("span");
+    right.textContent = session.closedAt || "";
+    head.appendChild(left);
+    head.appendChild(right);
+    card.appendChild(head);
 
-    setTimeout(function () {
-      sheet.style.transition = "none";
-      sheet.classList.remove("leaving");
-      sheet.style.opacity = "0";
-      requestAnimationFrame(function () {
-        sheet.style.transition = "";
-        sheet.classList.add("entering");
-        sheet.style.opacity = "";
-      });
-      renderChain();
-    }, 620);
-  });
+    (session.rows || []).forEach(function (r) {
+      var line = document.createElement("div");
+      line.className = "page-line";
+      var ex = document.createElement("span");
+      ex.className = "pl-ex";
+      ex.textContent = r.exercise || "—";
+      var num = document.createElement("span");
+      num.className = "pl-num";
+      var bits = [];
+      if (r.weight) bits.push(r.weight + " kg");
+      if (r.reps) bits.push(r.reps + "×");
+      num.textContent = bits.join("  ");
+      line.appendChild(ex);
+      line.appendChild(num);
+      card.appendChild(line);
+    });
 
-  window.addEventListener("beforeunload", autosave);
+    if (session.feeling) {
+      var f = document.createElement("div");
+      f.className = "page-feeling";
+      f.textContent = session.feeling;
+      card.appendChild(f);
+    }
+    return card;
+  }
 
-  // ---------- chain of weeks ----------
-  var chainEl = document.getElementById("chain");
+  function renderArchive() {
+    archiveEl.innerHTML = "";
+    var keys = Object.keys(entries).filter(function (k) {
+      return entries[k].sessions && entries[k].sessions.length;
+    }).sort().reverse();
+
+    if (!keys.length) return;
+
+    var title = document.createElement("div");
+    title.className = "archive-title";
+    title.textContent = "abgelegt";
+    archiveEl.appendChild(title);
+
+    var count = 0;
+    for (var i = 0; i < keys.length && count < 40; i++) {
+      var sess = entries[keys[i]].sessions;
+      for (var j = sess.length - 1; j >= 0 && count < 40; j--) {
+        archiveEl.appendChild(makeCard(keys[i], sess[j]));
+        count++;
+      }
+    }
+  }
+
+  function newestCard() {
+    return archiveEl.querySelector(".page-card");
+  }
+
+  // ---------- Kette ----------
 
   function renderChain() {
     chainEl.innerHTML = "";
-    var totalDays = 70; // ~10 weeks
+    var totalDays = 70;
     var start = new Date();
     start.setDate(start.getDate() - (totalDays - 1));
-    // align to weeks (7 columns), oldest first
     var days = [];
     for (var i = 0; i < totalDays; i++) {
       var d = new Date(start);
       d.setDate(start.getDate() + i);
       days.push(d);
     }
-    var weeks = [];
-    for (var i = 0; i < days.length; i += 7) {
-      weeks.push(days.slice(i, i + 7));
-    }
-    var todayStr = todayKey();
-    weeks.forEach(function (week) {
+    for (var w = 0; w < days.length; w += 7) {
       var rowEl = document.createElement("div");
       rowEl.className = "week-row";
-      week.forEach(function (d) {
+      days.slice(w, w + 7).forEach(function (d) {
+        var k = dayKey(d);
+        var entry = entries[k];
+        var filled = !!(entry && entry.sessions && entry.sessions.length);
         var dot = document.createElement("div");
-        var dKey = todayKey(d);
-        var hasEntry = !!entries[dKey];
-        dot.className = "dot" + (hasEntry ? " filled" : "") + (dKey === todayStr ? " today" : "");
+        dot.className = "dot" + (filled ? " filled" : "") + (k === todayK ? " today" : "");
         rowEl.appendChild(dot);
       });
       chainEl.appendChild(rowEl);
-    });
+    }
   }
 
-  renderChain();
+  // ---------- Abreissen und fallen lassen ----------
 
-  // ---------- export ----------
+  function maxScroll() {
+    return Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function easeInOutQuad(p) {
+    return p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+  }
+  function smoothstep(edge0, edge1, x) {
+    var t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+    return t * t * (3 - 2 * t);
+  }
+
+  function buildClone() {
+    var rect = sheet.getBoundingClientRect();
+    var clone = sheet.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.classList.add("flying");
+    clone.classList.remove("entering");
+
+    // cloneNode uebernimmt keine getippten input-Werte - die stehen nur
+    // als Property, nicht als Attribut.
+    var src = sheet.querySelectorAll("input");
+    var dst = clone.querySelectorAll("input");
+    for (var i = 0; i < src.length; i++) dst[i].setAttribute("value", src[i].value);
+
+    clone.style.position = "absolute";
+    clone.style.top = (rect.top + window.scrollY) + "px";
+    clone.style.left = (rect.left + window.scrollX) + "px";
+    clone.style.width = rect.width + "px";
+    clone.style.clipPath = tornClip();
+    document.body.appendChild(clone);
+    return { el: clone, top: rect.top + window.scrollY, left: rect.left + window.scrollX };
+  }
+
+  function tearAndFall(onDone) {
+    renderArchive();
+    var card = newestCard();
+
+    if (!card || prefersReducedMotion()) {
+      resetSheet();
+      renderChain();
+      onDone();
+      return;
+    }
+
+    card.style.visibility = "hidden";
+
+    var flying = buildClone();
+
+    // Erst Layout final machen, dann das Ziel messen: resetSheet aendert
+    // die Hoehe des Blattes und verschiebt damit alles darunter.
+    sheet.style.visibility = "hidden";
+    resetSheet();
+    renderChain();
+
+    var cardRect = card.getBoundingClientRect();
+    var dx = (cardRect.left + window.scrollX) - flying.left;
+    var dy = (cardRect.top + window.scrollY) - flying.top;
+
+    var dir = Math.random() < 0.5 ? -1 : 1;
+    var sway = dir * (24 + Math.random() * 16);
+    var spin = dir * (5 + Math.random() * 5);
+    var startScroll = window.scrollY;
+    var DUR = 1250;
+    var t0 = null;
+
+    function frame(ts) {
+      if (t0 === null) t0 = ts;
+      var p = clamp((ts - t0) / DUR, 0, 1);
+
+      // Kurzes Anreissen: das Blatt kippt an der Oberkante, bevor es loslaesst.
+      var tear = smoothstep(0, 0.13, p);
+      var e = easeInOutQuad(p);
+
+      var y = dy * e;
+      var x = dx * e + Math.sin(p * Math.PI * 2.4) * sway * (1 - p * 0.55);
+      var rot = Math.sin(p * Math.PI * 2.4 + 0.5) * spin * (1 - p * 0.6) + (1 - tear) * -1.5;
+      var tiltX = Math.cos(p * Math.PI * 3) * 9 * (1 - p);
+
+      flying.el.style.transform =
+        "perspective(900px) translate3d(" + x.toFixed(2) + "px," + y.toFixed(2) + "px,0)" +
+        " rotate(" + rot.toFixed(2) + "deg) rotateX(" + tiltX.toFixed(2) + "deg)";
+
+      // Die Seite laeuft mit, damit man das Blatt bis zur Ablage sieht.
+      var follow = smoothstep(0.12, 0.5, p);
+      var want = clamp(flying.top + y - window.innerHeight * 0.34, 0, maxScroll());
+      window.scrollTo(0, startScroll + (want - startScroll) * follow);
+
+      if (p < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        card.style.visibility = "";
+        card.classList.add("settling");
+        flying.el.style.transition = "opacity 0.18s ease";
+        flying.el.style.opacity = "0";
+        setTimeout(function () {
+          if (flying.el.parentNode) flying.el.parentNode.removeChild(flying.el);
+          onDone();
+        }, 190);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  finishBtn.addEventListener("click", function () {
+    var rows = collectRows();
+    var feeling = feelingInput.value.trim();
+
+    if (!rows.length && !feeling) {
+      emptyHint.classList.add("show");
+      return;
+    }
+
+    var entry = todayEntry();
+    var stamp = new Date();
+    entry.sessions.push({
+      rows: rows,
+      feeling: feeling,
+      closedAt: pad(stamp.getHours()) + ":" + pad(stamp.getMinutes())
+    });
+    entry.draft = { rows: [], feeling: "" };
+    saveEntries(entries);
+    rows.forEach(function (r) { pushExerciseName(r.exercise); });
+
+    finishBtn.disabled = true;
+    tearAndFall(function () {
+      finishBtn.disabled = false;
+      setTimeout(function () {
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+        sheet.style.visibility = "";
+        sheet.classList.remove("entering");
+        void sheet.offsetWidth;
+        sheet.classList.add("entering");
+      }, 550);
+    });
+  });
+
+  // ---------- Export ----------
+
   function download(filename, content, mime) {
     var blob = new Blob([content], { type: mime });
     var url = URL.createObjectURL(blob);
@@ -657,33 +915,46 @@
     URL.revokeObjectURL(url);
   }
 
+  function csvCell(v) {
+    return '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  }
+
   document.getElementById("exportJson").addEventListener("click", function () {
-    autosave();
-    var data = JSON.stringify(entries, null, 2);
-    download("kraft-ruhe-export.json", data, "application/json");
+    saveDraft();
+    download("kraft-ruhe-export.json", JSON.stringify(entries, null, 2), "application/json");
   });
 
   document.getElementById("exportCsv").addEventListener("click", function () {
-    autosave();
-    var lines = ["Datum,Übung,Gewicht,Wiederholungen,Wie war's"];
-    Object.keys(entries).sort().forEach(function (dateKey) {
-      var entry = entries[dateKey];
-      var feeling = (entry.feeling || "").replace(/"/g, '""');
-      if (entry.rows && entry.rows.length) {
-        entry.rows.forEach(function (r) {
-          var ex = (r.exercise || "").replace(/"/g, '""');
-          lines.push([dateKey, '"' + ex + '"', r.weight || "", r.reps || "", '"' + feeling + '"'].join(","));
+    saveDraft();
+    var lines = ["Datum,Einheit,Uhrzeit,Übung,Gewicht,Wiederholungen,Wie war's"];
+    Object.keys(entries).sort().forEach(function (k) {
+      var sessions = entries[k].sessions || [];
+      sessions.forEach(function (s, idx) {
+        var rows = s.rows && s.rows.length ? s.rows : [{ exercise: "", weight: "", reps: "" }];
+        rows.forEach(function (r) {
+          lines.push([
+            k, idx + 1, csvCell(s.closedAt || ""),
+            csvCell(r.exercise), csvCell(r.weight), csvCell(r.reps),
+            csvCell(s.feeling || "")
+          ].join(","));
         });
-      } else {
-        lines.push([dateKey, "", "", "", '"' + feeling + '"'].join(","));
-      }
+      });
     });
     download("kraft-ruhe-export.csv", lines.join("\n"), "text/csv");
   });
 
-  document.addEventListener("click", function (e) {
-    if (!e.target.closest(".ex-wrap")) closeAllSuggestions();
-  });
+  // ---------- Start ----------
+
+  var draft = todayEntry().draft || { rows: [], feeling: "" };
+  if (draft.rows && draft.rows.length) {
+    draft.rows.forEach(function (r) { createRow(r); });
+  } else {
+    createRow();
+  }
+  feelingInput.value = draft.feeling || "";
+  updateUnitHint();
+  renderChain();
+  renderArchive();
 })();
 </script>
 
