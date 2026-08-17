@@ -330,6 +330,33 @@
     color: var(--ink-soft);
     margin-bottom: 10px;
   }
+  .page-head-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-del {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    margin: -2px -4px -2px 0;
+    font-family: inherit;
+    font-size: 0.78rem;
+    line-height: 1;
+    color: #cfc9bc;
+    cursor: pointer;
+  }
+  .page-del:hover { color: var(--ink-soft); }
+  .page-del.confirm { color: var(--accent); }
+
+  @keyframes lift {
+    to { transform: translateY(-8px); opacity: 0; }
+  }
+  .page-card.removing {
+    animation: lift 0.28s ease forwards;
+    pointer-events: none;
+  }
+
   .page-line {
     display: flex;
     justify-content: space-between;
@@ -374,7 +401,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .sheet.entering, .page-card.settling { animation: none; }
+    .sheet.entering, .page-card.settling, .page-card.removing { animation: none; }
   }
 </style>
 </head>
@@ -501,7 +528,38 @@
     return str.trim().replace(",", ".");
   }
 
-  var entries = migrate(loadEntries());
+  function makeId() {
+    return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 7);
+  }
+
+  // Stabile Kennung je Einheit, damit Loeschen nicht ueber Indizes laeuft.
+  function ensureIds(data) {
+    var touched = false;
+    Object.keys(data).forEach(function (k) {
+      (data[k].sessions || []).forEach(function (s) {
+        if (!s.id) { s.id = makeId(); touched = true; }
+      });
+    });
+    if (touched) saveEntries(data);
+    return data;
+  }
+
+  function deleteSession(id) {
+    var keys = Object.keys(entries);
+    for (var i = 0; i < keys.length; i++) {
+      var sess = entries[keys[i]].sessions || [];
+      for (var j = 0; j < sess.length; j++) {
+        if (sess[j].id === id) {
+          sess.splice(j, 1);
+          saveEntries(entries);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  var entries = ensureIds(migrate(loadEntries()));
   var todayK = dayKey();
 
   function todayEntry() {
@@ -675,8 +733,51 @@
     left.textContent = formatDayLabel(key);
     var right = document.createElement("span");
     right.textContent = session.closedAt || "";
+
+    // Zwei Schritte: das x fragt erst nach, damit ein Fehlgriff
+    // nicht sofort einen Eintrag entfernt.
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "page-del";
+    del.textContent = "×";
+    del.setAttribute("aria-label", "Eintrag entfernen");
+
+    var armed = false;
+    var timer = null;
+
+    function disarm() {
+      armed = false;
+      clearTimeout(timer);
+      del.textContent = "×";
+      del.classList.remove("confirm");
+    }
+
+    del.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!armed) {
+        armed = true;
+        del.textContent = "löschen?";
+        del.classList.add("confirm");
+        timer = setTimeout(disarm, 3500);
+        return;
+      }
+      clearTimeout(timer);
+      if (!deleteSession(session.id)) return;
+      card.classList.add("removing");
+      setTimeout(function () {
+        renderArchive();
+        renderChain();
+        updateUnitHint();
+      }, prefersReducedMotion() ? 0 : 290);
+    });
+
+    var rightGroup = document.createElement("span");
+    rightGroup.className = "page-head-right";
+    rightGroup.appendChild(right);
+    rightGroup.appendChild(del);
+
     head.appendChild(left);
-    head.appendChild(right);
+    head.appendChild(rightGroup);
     card.appendChild(head);
 
     (session.rows || []).forEach(function (r) {
@@ -880,6 +981,7 @@
     var entry = todayEntry();
     var stamp = new Date();
     entry.sessions.push({
+      id: makeId(),
       rows: rows,
       feeling: feeling,
       closedAt: pad(stamp.getHours()) + ":" + pad(stamp.getMinutes())
