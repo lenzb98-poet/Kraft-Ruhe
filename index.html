@@ -380,9 +380,22 @@
     max-width: 480px;
     margin-top: 32px;
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
   }
+  .io-note {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-top: 12px;
+    min-height: 1em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .io-note.show { opacity: 1; }
   .export-btn {
     background: none;
     border: 1px solid var(--line);
@@ -442,7 +455,10 @@
 <div class="export-bar">
   <button class="export-btn" id="exportJson" type="button">Export JSON</button>
   <button class="export-btn" id="exportCsv" type="button">Export CSV</button>
+  <button class="export-btn" id="importBtn" type="button">Import JSON</button>
 </div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
+<div class="io-note" id="ioNote"></div>
 
 <script>
 (function () {
@@ -481,7 +497,9 @@
 
   // Alte Form war { rows, feeling, done } - ein Eintrag pro Tag.
   // Neu ist { sessions: [...], draft: {...} } - mehrere Einheiten pro Tag.
-  function migrate(data) {
+  // persist=false beim Import: die eingelesene Datei darf den
+  // gespeicherten Stand nicht ueberschreiben, bevor zusammengefuehrt wurde.
+  function migrate(data, persist) {
     var heute = dayKey();
     var touched = false;
     Object.keys(data).forEach(function (k) {
@@ -501,7 +519,7 @@
       data[k] = next;
       touched = true;
     });
-    if (touched) saveEntries(data);
+    if (touched && persist !== false) saveEntries(data);
     return data;
   }
 
@@ -533,14 +551,14 @@
   }
 
   // Stabile Kennung je Einheit, damit Loeschen nicht ueber Indizes laeuft.
-  function ensureIds(data) {
+  function ensureIds(data, persist) {
     var touched = false;
     Object.keys(data).forEach(function (k) {
       (data[k].sessions || []).forEach(function (s) {
         if (!s.id) { s.id = makeId(); touched = true; }
       });
     });
-    if (touched) saveEntries(data);
+    if (touched && persist !== false) saveEntries(data);
     return data;
   }
 
@@ -1045,16 +1063,143 @@
     download("kraft-ruhe-export.csv", lines.join("\n"), "text/csv");
   });
 
+  // ---------- Import ----------
+
+  var ioNote = document.getElementById("ioNote");
+  var noteTimer = null;
+
+  function showNote(text) {
+    ioNote.textContent = text;
+    ioNote.classList.add("show");
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function () { ioNote.classList.remove("show"); }, 7000);
+  }
+
+  function loadDraftIntoSheet() {
+    var draft = todayEntry().draft || { rows: [], feeling: "" };
+    rowsEl.innerHTML = "";
+    if (draft.rows && draft.rows.length) {
+      draft.rows.forEach(function (r) { createRow(r); });
+    } else {
+      createRow();
+    }
+    feelingInput.value = draft.feeling || "";
+    updateUnitHint();
+  }
+
+  function looksLikeEntries(obj) {
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return false;
+    return Object.keys(obj).every(function (k) {
+      var v = obj[k];
+      return /^\d{4}-\d{2}-\d{2}$/.test(k) && v && typeof v === "object" && !Array.isArray(v);
+    });
+  }
+
+  // Kennzeichen einer Einheit fuer Dateien, die noch keine ids haben.
+  function sessionSignature(s) {
+    return (s.closedAt || "") + "|" + (s.feeling || "") + "|" +
+      JSON.stringify((s.rows || []).map(function (r) {
+        return [r.exercise || "", r.weight || "", r.reps || ""];
+      }));
+  }
+
+  function isDraftEmpty(d) {
+    return !d || (!(d.rows && d.rows.length) && !d.feeling);
+  }
+
+  // Zusammenfuehren statt ersetzen: was schon da ist, bleibt.
+  function mergeEntries(incoming) {
+    var added = 0;
+    Object.keys(incoming).forEach(function (k) {
+      var src = incoming[k];
+      var sessions = src.sessions || [];
+      if (!entries[k]) entries[k] = { sessions: [], draft: { rows: [], feeling: "" } };
+      var target = entries[k];
+
+      var seenIds = {}, seenSigs = {};
+      target.sessions.forEach(function (s) {
+        if (s.id) seenIds[s.id] = true;
+        seenSigs[sessionSignature(s)] = true;
+      });
+
+      sessions.forEach(function (s) {
+        if (!s || typeof s !== "object") return;
+        var sig = sessionSignature(s);
+        if ((s.id && seenIds[s.id]) || seenSigs[sig]) return;
+        if (!s.id) s.id = makeId();
+        target.sessions.push(s);
+        seenIds[s.id] = true;
+        seenSigs[sig] = true;
+        added++;
+      });
+
+      target.sessions.sort(function (a, b) {
+        return String(a.closedAt || "").localeCompare(String(b.closedAt || ""));
+      });
+
+      if (isDraftEmpty(target.draft) && !isDraftEmpty(src.draft)) target.draft = src.draft;
+    });
+    return added;
+  }
+
+  function seedExerciseNames(incoming) {
+    if (loadExerciseNames().length) return;
+    Object.keys(incoming).sort().forEach(function (k) {
+      (incoming[k].sessions || []).forEach(function (s) {
+        (s.rows || []).forEach(function (r) { pushExerciseName(r.exercise); });
+      });
+    });
+  }
+
+  function importJson(text) {
+    var parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      showNote("Die Datei liess sich nicht lesen.");
+      return;
+    }
+    if (!looksLikeEntries(parsed)) {
+      showNote("Das sieht nicht nach einem Kraft-und-Ruhe-Export aus.");
+      return;
+    }
+
+    // Alte Exporte durchlaufen dieselbe Umstellung wie gespeicherte Daten.
+    var incoming = ensureIds(migrate(parsed, false), false);
+    var added = mergeEntries(incoming);
+
+    if (!added) {
+      showNote("Alles daraus war schon da.");
+      return;
+    }
+
+    seedExerciseNames(incoming);
+    saveEntries(entries);
+    loadDraftIntoSheet();
+    renderChain();
+    renderArchive();
+    showNote(added === 1 ? "1 Einheit übernommen." : added + " Einheiten übernommen.");
+  }
+
+  var importFile = document.getElementById("importFile");
+
+  document.getElementById("importBtn").addEventListener("click", function () {
+    importFile.click();
+  });
+
+  importFile.addEventListener("change", function () {
+    var file = importFile.files && importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () { importJson(String(reader.result)); };
+    reader.onerror = function () { showNote("Die Datei liess sich nicht lesen."); };
+    reader.readAsText(file);
+    importFile.value = "";
+  });
+
   // ---------- Start ----------
 
-  var draft = todayEntry().draft || { rows: [], feeling: "" };
-  if (draft.rows && draft.rows.length) {
-    draft.rows.forEach(function (r) { createRow(r); });
-  } else {
-    createRow();
-  }
-  feelingInput.value = draft.feeling || "";
-  updateUnitHint();
+  loadDraftIntoSheet();
   renderChain();
   renderArchive();
 })();
