@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kraft &amp; Ruhe</title>
+<style>
+  :root {
+    --bg: #faf8f4;
+    --paper: #ffffff;
+    --ink: #2e2b26;
+    --ink-soft: #8a8477;
+    --line: #e8e3d9;
+    --accent: #b7a98f;
+    --accent-soft: #ede8dd;
+    --dot-filled: #b7a98f;
+    --dot-empty: #e8e3d9;
+    --danger: none;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px 80px;
+  }
+
+  .sheet {
+    width: 100%;
+    max-width: 480px;
+    background: var(--paper);
+    border-radius: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05);
+    padding: 28px 22px 24px;
+    transition: transform 0.6s cubic-bezier(.55,0,.55,1), opacity 0.6s ease;
+  }
+
+  .sheet.leaving {
+    transform: translateY(120vh) rotate(2deg);
+    opacity: 0;
+  }
+
+  .sheet.entering {
+    animation: riseIn 0.5s ease both;
+  }
+
+  @keyframes riseIn {
+    from { transform: translateY(24px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .date {
+    font-size: 1.7rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+
+  .date-sub {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    margin: 0 0 22px;
+    text-transform: capitalize;
+  }
+
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 64px 56px 26px;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .row input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-size: 0.95rem;
+    color: var(--ink);
+    padding: 7px 2px;
+    outline: none;
+    font-family: inherit;
+    min-width: 0;
+  }
+
+  .row input::placeholder {
+    color: #c9c3b6;
+  }
+
+  .row input:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .row .ex-wrap {
+    position: relative;
+  }
+
+  .row-remove {
+    background: none;
+    border: none;
+    color: #c9c3b6;
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+  }
+  .row-remove:hover { color: var(--ink-soft); }
+
+  .col-labels {
+    display: grid;
+    grid-template-columns: 1fr 64px 56px 26px;
+    gap: 6px;
+    font-size: 0.68rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+    padding: 0 2px;
+  }
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 10px 2px;
+    font-family: inherit;
+  }
+  .add-btn .plus-circle {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    z-index: 20;
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+  }
+  .suggestions.show { display: block; }
+  .suggestions div {
+    padding: 8px 10px;
+    font-size: 0.88rem;
+    cursor: pointer;
+  }
+  .suggestions div:hover, .suggestions div.active {
+    background: var(--accent-soft);
+  }
+
+  .feeling-wrap {
+    margin-top: 20px;
+  }
+  .feeling-label {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+  }
+  .feeling-input {
+    width: 100%;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    background: transparent;
+    font-size: 1.05rem;
+    padding: 8px 2px;
+    outline: none;
+    font-family: inherit;
+    color: var(--ink);
+  }
+  .feeling-input:focus { border-bottom-color: var(--accent); }
+  .feeling-input::placeholder { color: #c9c3b6; }
+
+  .finish-btn {
+    width: 100%;
+    margin-top: 26px;
+    padding: 15px;
+    border: none;
+    border-radius: 12px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 0.01em;
+  }
+  .finish-btn:active { opacity: 0.85; }
+
+  .done-note {
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    margin-top: 18px;
+  }
+
+  /* chain of weeks */
+  .chain-section {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 40px;
+  }
+  .chain-title {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+  .week-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--dot-empty);
+    flex-shrink: 0;
+  }
+  .dot.filled {
+    background: var(--dot-filled);
+  }
+  .dot.today {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .export-bar {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 32px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .export-btn {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 0.8rem;
+    padding: 8px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .export-btn:hover { border-color: var(--accent); color: var(--ink); }
+
+  @media (max-width: 380px) {
+    .row { grid-template-columns: 1fr 52px 46px 22px; }
+    .col-labels { grid-template-columns: 1fr 52px 46px 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet" id="sheet">
+  <div class="date" id="dateBig"></div>
+  <div class="date-sub" id="dateSub"></div>
+
+  <div class="col-labels">
+    <span>Übung</span><span>kg</span><span>Wdh.</span><span></span>
+  </div>
+  <div class="rows" id="rows"></div>
+
+  <button class="add-btn" id="addRowBtn" type="button">
+    <span class="plus-circle">+</span> Übung hinzufügen
+  </button>
+
+  <div class="feeling-wrap">
+    <div class="feeling-label">Wie war's</div>
+    <input class="feeling-input" id="feelingInput" type="text" placeholder="ein Wort reicht…" maxlength="60">
+  </div>
+
+  <button class="finish-btn" id="finishBtn" type="button">Tag abschließen</button>
+  <div class="done-note" id="doneNote" style="display:none;">Für heute festgehalten.</div>
+</div>
+
+<div class="chain-section">
+  <div class="chain-title">letzte Wochen</div>
+  <div id="chain"></div>
+</div>
+
+<div class="export-bar">
+  <button class="export-btn" id="exportJson" type="button">Export JSON</button>
+  <button class="export-btn" id="exportCsv" type="button">Export CSV</button>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "kraftRuhe.entries";
+  var EXERCISES_KEY = "kraftRuhe.exerciseNames";
+
+  function todayKey(d) {
+    d = d || new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function loadEntries() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveEntries(entries) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }
+
+  function loadExerciseNames() {
+    try {
+      var raw = localStorage.getItem(EXERCISES_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveExerciseNames(list) {
+    localStorage.setItem(EXERCISES_KEY, JSON.stringify(list));
+  }
+
+  function pushExerciseName(name) {
+    name = name.trim();
+    if (!name) return;
+    var list = loadExerciseNames();
+    var lower = name.toLowerCase();
+    list = list.filter(function (n) { return n.toLowerCase() !== lower; });
+    list.unshift(name);
+    if (list.length > 30) list = list.slice(0, 30);
+    saveExerciseNames(list);
+  }
+
+  function normalizeNumberInput(str) {
+    if (!str) return "";
+    return str.trim().replace(",", ".");
+  }
+
+  var entries = loadEntries();
+  var key = todayKey();
+  var today = entries[key] || { rows: [], feeling: "", done: false };
+
+  var sheet = document.getElementById("sheet");
+  var rowsEl = document.getElementById("rows");
+  var addRowBtn = document.getElementById("addRowBtn");
+  var feelingInput = document.getElementById("feelingInput");
+  var finishBtn = document.getElementById("finishBtn");
+  var doneNote = document.getElementById("doneNote");
+  var dateBig = document.getElementById("dateBig");
+  var dateSub = document.getElementById("dateSub");
+
+  function formatDateBig(d) {
+    var months = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+    return d.getDate() + ". " + months[d.getMonth()];
+  }
+  function formatDateSub(d) {
+    var days = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
+    return days[d.getDay()] + ", " + d.getFullYear();
+  }
+
+  var now = new Date();
+  dateBig.textContent = formatDateBig(now);
+  dateSub.textContent = formatDateSub(now);
+
+  function persistToday() {
+    entries[key] = today;
+    saveEntries(entries);
+  }
+
+  function collectRowsFromDom() {
+    var rows = [];
+    rowsEl.querySelectorAll(".row").forEach(function (rowEl) {
+      var ex = rowEl.querySelector(".ex-input").value.trim();
+      var weight = rowEl.querySelector(".w-input").value.trim();
+      var reps = rowEl.querySelector(".r-input").value.trim();
+      if (ex || weight || reps) {
+        rows.push({ exercise: ex, weight: weight, reps: reps });
+      }
+    });
+    return rows;
+  }
+
+  function autosave() {
+    today.rows = collectRowsFromDom();
+    today.feeling = feelingInput.value.trim();
+    persistToday();
+  }
+
+  function closeAllSuggestions() {
+    document.querySelectorAll(".suggestions").forEach(function (s) {
+      s.classList.remove("show");
+    });
+  }
+
+  function createRow(data) {
+    data = data || { exercise: "", weight: "", reps: "" };
+    var row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML =
+      '<div class="ex-wrap">' +
+        '<input class="ex-input" type="text" placeholder="Übung" autocomplete="off" tabindex="0">' +
+        '<div class="suggestions"></div>' +
+      '</div>' +
+      '<input class="w-input" type="text" inputmode="decimal" placeholder="kg" tabindex="0">' +
+      '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh." tabindex="0">' +
+      '<button type="button" class="row-remove" title="entfernen">×</button>';
+
+    var exInput = row.querySelector(".ex-input");
+    var wInput = row.querySelector(".w-input");
+    var rInput = row.querySelector(".r-input");
+    var suggBox = row.querySelector(".suggestions");
+    var removeBtn = row.querySelector(".row-remove");
+
+    exInput.value = data.exercise || "";
+    wInput.value = data.weight || "";
+    rInput.value = data.reps || "";
+
+    function renderSuggestions() {
+      var names = loadExerciseNames();
+      var q = exInput.value.trim().toLowerCase();
+      var filtered = q
+        ? names.filter(function (n) { return n.toLowerCase().indexOf(q) === 0; })
+        : names;
+      filtered = filtered.slice(0, 6);
+      if (!filtered.length) {
+        suggBox.classList.remove("show");
+        suggBox.innerHTML = "";
+        return;
+      }
+      suggBox.innerHTML = "";
+      filtered.forEach(function (n) {
+        var item = document.createElement("div");
+        item.textContent = n;
+        item.addEventListener("mousedown", function (e) {
+          e.preventDefault();
+          exInput.value = n;
+          suggBox.classList.remove("show");
+          wInput.focus();
+          autosave();
+        });
+        suggBox.appendChild(item);
+      });
+      suggBox.classList.add("show");
+    }
+
+    exInput.addEventListener("focus", renderSuggestions);
+    exInput.addEventListener("input", function () {
+      renderSuggestions();
+      autosave();
+    });
+    exInput.addEventListener("blur", function () {
+      setTimeout(function () { suggBox.classList.remove("show"); }, 120);
+    });
+
+    wInput.addEventListener("input", function () {
+      autosave();
+    });
+    wInput.addEventListener("blur", function () {
+      wInput.value = normalizeNumberInput(wInput.value);
+      autosave();
+    });
+
+    rInput.addEventListener("input", autosave);
+    rInput.addEventListener("blur", autosave);
+
+    exInput.addEventListener("blur", function () {
+      if (exInput.value.trim()) pushExerciseName(exInput.value.trim());
+    });
+
+    removeBtn.addEventListener("click", function () {
+      row.remove();
+      if (!rowsEl.children.length) addRow();
+      autosave();
+    });
+
+    rowsEl.appendChild(row);
+    return row;
+  }
+
+  function addRow(data, focus) {
+    var row = createRow(data);
+    if (focus) {
+      row.querySelector(".ex-input").focus();
+    }
+    return row;
+  }
+
+  addRowBtn.addEventListener("click", function () {
+    addRow(null, true);
+  });
+
+  // initial rows
+  if (today.rows && today.rows.length) {
+    today.rows.forEach(function (r) { addRow(r); });
+  } else {
+    addRow();
+  }
+  feelingInput.value = today.feeling || "";
+
+  if (today.done) {
+    finishBtn.disabled = true;
+    finishBtn.textContent = "Tag abgeschlossen";
+    finishBtn.style.opacity = "0.6";
+    doneNote.style.display = "block";
+  }
+
+  finishBtn.addEventListener("click", function () {
+    autosave();
+    today.done = true;
+    persistToday();
+
+    sheet.classList.add("leaving");
+    finishBtn.disabled = true;
+    finishBtn.textContent = "Tag abgeschlossen";
+    doneNote.style.display = "block";
+
+    setTimeout(function () {
+      sheet.style.transition = "none";
+      sheet.classList.remove("leaving");
+      sheet.style.opacity = "0";
+      requestAnimationFrame(function () {
+        sheet.style.transition = "";
+        sheet.classList.add("entering");
+        sheet.style.opacity = "";
+      });
+      renderChain();
+    }, 620);
+  });
+
+  window.addEventListener("beforeunload", autosave);
+
+  // ---------- chain of weeks ----------
+  var chainEl = document.getElementById("chain");
+
+  function renderChain() {
+    chainEl.innerHTML = "";
+    var totalDays = 70; // ~10 weeks
+    var start = new Date();
+    start.setDate(start.getDate() - (totalDays - 1));
+    // align to weeks (7 columns), oldest first
+    var days = [];
+    for (var i = 0; i < totalDays; i++) {
+      var d = new Date(start);
+      d.setDate(start.getDate() + i);
+      days.push(d);
+    }
+    var weeks = [];
+    for (var i = 0; i < days.length; i += 7) {
+      weeks.push(days.slice(i, i + 7));
+    }
+    var todayStr = todayKey();
+    weeks.forEach(function (week) {
+      var rowEl = document.createElement("div");
+      rowEl.className = "week-row";
+      week.forEach(function (d) {
+        var dot = document.createElement("div");
+        var dKey = todayKey(d);
+        var hasEntry = !!entries[dKey];
+        dot.className = "dot" + (hasEntry ? " filled" : "") + (dKey === todayStr ? " today" : "");
+        rowEl.appendChild(dot);
+      });
+      chainEl.appendChild(rowEl);
+    });
+  }
+
+  renderChain();
+
+  // ---------- export ----------
+  function download(filename, content, mime) {
+    var blob = new Blob([content], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("exportJson").addEventListener("click", function () {
+    autosave();
+    var data = JSON.stringify(entries, null, 2);
+    download("kraft-ruhe-export.json", data, "application/json");
+  });
+
+  document.getElementById("exportCsv").addEventListener("click", function () {
+    autosave();
+    var lines = ["Datum,Übung,Gewicht,Wiederholungen,Wie war's"];
+    Object.keys(entries).sort().forEach(function (dateKey) {
+      var entry = entries[dateKey];
+      var feeling = (entry.feeling || "").replace(/"/g, '""');
+      if (entry.rows && entry.rows.length) {
+        entry.rows.forEach(function (r) {
+          var ex = (r.exercise || "").replace(/"/g, '""');
+          lines.push([dateKey, '"' + ex + '"', r.weight || "", r.reps || "", '"' + feeling + '"'].join(","));
+        });
+      } else {
+        lines.push([dateKey, "", "", "", '"' + feeling + '"'].join(","));
+      }
+    });
+    download("kraft-ruhe-export.csv", lines.join("\n"), "text/csv");
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".ex-wrap")) closeAllSuggestions();
+  });
+})();
+</script>
+
+</body>
+</html>
