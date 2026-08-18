@@ -539,6 +539,7 @@
     <button class="export-btn" id="exportJson" type="button">Export JSON</button>
     <button class="export-btn" id="exportCsv" type="button">Export CSV</button>
     <button class="export-btn" id="importBtn" type="button">Import JSON</button>
+    <button class="export-btn" id="resetSuggestBtn" type="button">Vorschläge zurücksetzen</button>
   </div>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -612,6 +613,35 @@
       var raw = localStorage.getItem(EXERCISES_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch (e) { return []; }
+  }
+
+  // Erster Klick fragt nach, zweiter (innerhalb der Frist) fuehrt aus.
+  // Ein Fehlgriff auf ein kleines Ziel soll nichts sofort zerstoeren.
+  function armConfirm(btn, confirmText, onConfirm) {
+    var idleText = btn.textContent;
+    var armed = false;
+    var timer = null;
+
+    function disarm() {
+      armed = false;
+      clearTimeout(timer);
+      btn.textContent = idleText;
+      btn.classList.remove("confirm");
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (!armed) {
+        armed = true;
+        btn.textContent = confirmText;
+        btn.classList.add("confirm");
+        timer = setTimeout(disarm, 3500);
+        return;
+      }
+      clearTimeout(timer);
+      disarm();
+      onConfirm();
+    });
   }
 
   function pushExerciseName(name) {
@@ -843,34 +873,13 @@
     var right = document.createElement("span");
     right.textContent = session.closedAt || "";
 
-    // Zwei Schritte: das x fragt erst nach, damit ein Fehlgriff
-    // nicht sofort einen Eintrag entfernt.
     var del = document.createElement("button");
     del.type = "button";
     del.className = "page-del";
     del.textContent = "×";
     del.setAttribute("aria-label", "Eintrag entfernen");
 
-    var armed = false;
-    var timer = null;
-
-    function disarm() {
-      armed = false;
-      clearTimeout(timer);
-      del.textContent = "×";
-      del.classList.remove("confirm");
-    }
-
-    del.addEventListener("click", function (e) {
-      e.stopPropagation();
-      if (!armed) {
-        armed = true;
-        del.textContent = "löschen?";
-        del.classList.add("confirm");
-        timer = setTimeout(disarm, 3500);
-        return;
-      }
-      clearTimeout(timer);
+    armConfirm(del, "löschen?", function () {
       if (!deleteSession(session.id)) return;
       card.classList.add("removing");
       setTimeout(function () {
@@ -1364,6 +1373,12 @@
       setIoOpen(false);
       ioToggle.focus();
     }
+  });
+
+  var resetSuggestBtn = document.getElementById("resetSuggestBtn");
+  armConfirm(resetSuggestBtn, "wirklich?", function () {
+    try { localStorage.removeItem(EXERCISES_KEY); } catch (e) {}
+    showNote("Vorschlagsliste geleert.");
   });
 
   var importFile = document.getElementById("importFile");
