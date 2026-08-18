@@ -287,20 +287,56 @@
   .week-row {
     display: flex;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 0;
   }
   .dot {
-    width: 11px;
-    height: 11px;
+    width: 25px;
+    height: 25px;
+    padding: 0;
+    border: none;
+    background: none;
+    position: relative;
+    flex-shrink: 0;
+    cursor: default;
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .dot::after {
+    content: "";
+    position: absolute;
+    inset: 7px;
     border-radius: 50%;
     background: var(--dot-empty);
-    flex-shrink: 0;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
   }
-  .dot.filled { background: var(--dot-filled); }
-  .dot.today { box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dot.filled { cursor: pointer; }
+  .dot.filled::after { background: var(--dot-filled); }
+  .dot.today::after { box-shadow: 0 0 0 3px var(--accent-soft); }
+  .dot.selected::after { box-shadow: 0 0 0 3px var(--accent); }
+  .dot:focus-visible { outline: none; }
+  .dot:focus-visible::after { box-shadow: 0 0 0 3px var(--accent); }
 
   /* Ablage der abgerissenen Blaetter */
+  .archive-title { margin-bottom: 0; }
+  .archive-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .archive-back {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 0;
+  }
+  .archive-back:hover { color: var(--ink); }
+
   .archive {
     width: 100%;
     max-width: 480px;
@@ -621,6 +657,7 @@
 
   var entries = ensureIds(migrate(loadEntries()));
   var todayK = dayKey();
+  var viewKey = todayK;
 
   function todayEntry() {
     if (!entries[todayK]) entries[todayK] = { sessions: [], draft: { rows: [], feeling: "" } };
@@ -639,9 +676,15 @@
   var chainEl = document.getElementById("chain");
   var archiveEl = document.getElementById("archive");
 
-  var now = new Date();
-  document.getElementById("dateBig").textContent = now.getDate() + ". " + MONTHS[now.getMonth()];
-  document.getElementById("dateSub").textContent = DAYS[now.getDay()] + ", " + now.getFullYear();
+  var dateBig = document.getElementById("dateBig");
+  var dateSub = document.getElementById("dateSub");
+
+  function renderDate() {
+    var d = new Date();
+    dateBig.textContent = d.getDate() + ". " + MONTHS[d.getMonth()];
+    dateSub.textContent = DAYS[d.getDay()] + ", " + d.getFullYear();
+  }
+  renderDate();
 
   // ---------- Zeilen ----------
 
@@ -782,7 +825,7 @@
     return DAYS[d.getDay()].slice(0, 2) + ", " + d.getDate() + ". " + MONTHS[d.getMonth()];
   }
 
-  function makeCard(key, session) {
+  function makeCard(session, ordinal) {
     var card = document.createElement("div");
     card.className = "page-card";
     card.style.clipPath = tornClip();
@@ -790,7 +833,7 @@
     var head = document.createElement("div");
     head.className = "page-head";
     var left = document.createElement("span");
-    left.textContent = formatDayLabel(key);
+    left.textContent = ordinal + ". Einheit";
     var right = document.createElement("span");
     right.textContent = session.closedAt || "";
 
@@ -866,26 +909,45 @@
     return card;
   }
 
+  // Unten liegt immer nur ein Tag: heute, oder der ueber die Kette gewaehlte.
   function renderArchive() {
     archiveEl.innerHTML = "";
-    var keys = Object.keys(entries).filter(function (k) {
-      return entries[k].sessions && entries[k].sessions.length;
-    }).sort().reverse();
+    var entry = entries[viewKey];
+    var sessions = (entry && entry.sessions) ? entry.sessions : [];
 
-    if (!keys.length) return;
-
-    var title = document.createElement("div");
-    title.className = "archive-title";
-    title.textContent = "abgelegt";
-    archiveEl.appendChild(title);
-
-    var count = 0;
-    for (var i = 0; i < keys.length && count < 40; i++) {
-      var sess = entries[keys[i]].sessions;
-      for (var j = sess.length - 1; j >= 0 && count < 40; j--) {
-        archiveEl.appendChild(makeCard(keys[i], sess[j]));
-        count++;
+    if (!sessions.length) {
+      if (viewKey !== todayK) {
+        viewKey = todayK;
+        renderChain();
+        renderArchive();
       }
+      return;
+    }
+
+    var head = document.createElement("div");
+    head.className = "archive-head";
+
+    var title = document.createElement("span");
+    title.className = "archive-title";
+    title.textContent = viewKey === todayK ? "abgelegt" : formatDayLabel(viewKey);
+    head.appendChild(title);
+
+    if (viewKey !== todayK) {
+      var back = document.createElement("button");
+      back.type = "button";
+      back.className = "archive-back";
+      back.textContent = "zu heute";
+      back.addEventListener("click", function () {
+        viewKey = todayK;
+        renderChain();
+        renderArchive();
+      });
+      head.appendChild(back);
+    }
+    archiveEl.appendChild(head);
+
+    for (var j = sessions.length - 1; j >= 0; j--) {
+      archiveEl.appendChild(makeCard(sessions[j], j + 1));
     }
   }
 
@@ -912,9 +974,32 @@
       days.slice(w, w + 7).forEach(function (d) {
         var k = dayKey(d);
         var entry = entries[k];
-        var filled = !!(entry && entry.sessions && entry.sessions.length);
-        var dot = document.createElement("div");
-        dot.className = "dot" + (filled ? " filled" : "") + (k === todayK ? " today" : "");
+        var count = (entry && entry.sessions) ? entry.sessions.length : 0;
+
+        var dot = document.createElement("button");
+        dot.type = "button";
+        dot.className = "dot" + (count ? " filled" : "") +
+          (k === todayK ? " today" : "") +
+          (k === viewKey && k !== todayK && count ? " selected" : "");
+
+        if (!count) {
+          // Leere Tage bleiben leer - nichts zum Nachsehen, kein Hinweis.
+          dot.disabled = true;
+          dot.setAttribute("aria-hidden", "true");
+          dot.tabIndex = -1;
+        } else {
+          dot.setAttribute("aria-label", formatDayLabel(k) + ", " +
+            (count === 1 ? "eine Einheit" : count + " Einheiten"));
+          dot.addEventListener("click", function () {
+            viewKey = k;
+            renderChain();
+            renderArchive();
+            archiveEl.scrollIntoView({
+              behavior: prefersReducedMotion() ? "auto" : "smooth",
+              block: "start"
+            });
+          });
+        }
         rowEl.appendChild(dot);
       });
       chainEl.appendChild(rowEl);
@@ -1049,6 +1134,9 @@
     entry.draft = { rows: [], feeling: "" };
     saveEntries(entries);
     rows.forEach(function (r) { pushExerciseName(r.exercise); });
+
+    // Falls gerade ein vergangener Tag angesehen wird: das Blatt gehoert nach heute.
+    viewKey = todayK;
 
     finishBtn.disabled = true;
     tearAndFall(function () {
@@ -1263,6 +1351,28 @@
     reader.onerror = function () { showNote("Die Datei liess sich nicht lesen."); };
     reader.readAsText(file);
     importFile.value = "";
+  });
+
+  // ---------- Tageswechsel ----------
+
+  // Bleibt die App ueber Mitternacht offen, wandert sie von selbst weiter -
+  // aber nur, wenn nichts Unabgeschlossenes auf dem Blatt steht.
+  function checkDayRollover() {
+    var k = dayKey();
+    if (k === todayK) return;
+    if (collectRows().length || feelingInput.value.trim()) return;
+
+    todayK = k;
+    viewKey = k;
+    renderDate();
+    loadDraftIntoSheet();
+    renderChain();
+    renderArchive();
+  }
+
+  setInterval(checkDayRollover, 60000);
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkDayRollover();
   });
 
   // ---------- Start ----------
