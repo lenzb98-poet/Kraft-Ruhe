@@ -297,7 +297,7 @@
     background: none;
     position: relative;
     flex-shrink: 0;
-    cursor: default;
+    cursor: pointer;
     -webkit-appearance: none;
     appearance: none;
     -webkit-tap-highlight-color: transparent;
@@ -310,7 +310,6 @@
     background: var(--dot-empty);
     transition: background 0.2s ease, box-shadow 0.2s ease;
   }
-  .dot.filled { cursor: pointer; }
   .dot.filled::after { background: var(--dot-filled); }
   .dot.today::after { box-shadow: 0 0 0 3px var(--accent-soft); }
   .dot.selected::after { box-shadow: 0 0 0 3px var(--accent); }
@@ -325,6 +324,13 @@
     justify-content: center;
     gap: 12px;
     margin-bottom: 14px;
+  }
+  .archive-empty {
+    text-align: center;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    font-style: italic;
+    padding: 4px 0 2px;
   }
   .archive-back {
     background: none;
@@ -915,14 +921,9 @@
     var entry = entries[viewKey];
     var sessions = (entry && entry.sessions) ? entry.sessions : [];
 
-    if (!sessions.length) {
-      if (viewKey !== todayK) {
-        viewKey = todayK;
-        renderChain();
-        renderArchive();
-      }
-      return;
-    }
+    // Heute ohne Einheit bleibt der Seitenfuss frei - erst ein bewusst
+    // gewaehlter Tag zeigt, dass dort nichts liegt.
+    if (!sessions.length && viewKey === todayK) return;
 
     var head = document.createElement("div");
     head.className = "archive-head";
@@ -946,6 +947,14 @@
     }
     archiveEl.appendChild(head);
 
+    if (!sessions.length) {
+      var leer = document.createElement("div");
+      leer.className = "archive-empty";
+      leer.textContent = "nichts abgelegt";
+      archiveEl.appendChild(leer);
+      return;
+    }
+
     for (var j = sessions.length - 1; j >= 0; j--) {
       archiveEl.appendChild(makeCard(sessions[j], j + 1));
     }
@@ -957,8 +966,11 @@
 
   // ---------- Kette ----------
 
+  var chainDots = [];
+
   function renderChain() {
     chainEl.innerHTML = "";
+    chainDots = [];
     var totalDays = 70;
     var start = new Date();
     start.setDate(start.getDate() - (totalDays - 1));
@@ -980,31 +992,48 @@
         dot.type = "button";
         dot.className = "dot" + (count ? " filled" : "") +
           (k === todayK ? " today" : "") +
-          (k === viewKey && k !== todayK && count ? " selected" : "");
+          (k === viewKey && k !== todayK ? " selected" : "");
 
-        if (!count) {
-          // Leere Tage bleiben leer - nichts zum Nachsehen, kein Hinweis.
-          dot.disabled = true;
-          dot.setAttribute("aria-hidden", "true");
-          dot.tabIndex = -1;
-        } else {
-          dot.setAttribute("aria-label", formatDayLabel(k) + ", " +
-            (count === 1 ? "eine Einheit" : count + " Einheiten"));
-          dot.addEventListener("click", function () {
-            viewKey = k;
-            renderChain();
-            renderArchive();
-            archiveEl.scrollIntoView({
-              behavior: prefersReducedMotion() ? "auto" : "smooth",
-              block: "start"
-            });
+        dot.setAttribute("aria-label", formatDayLabel(k) + ", " +
+          (count === 0 ? "nichts abgelegt"
+            : count === 1 ? "eine Einheit" : count + " Einheiten"));
+
+        // Nur ein Punkt liegt in der Tab-Reihenfolge, zwischen den
+        // uebrigen bewegt man sich mit den Pfeiltasten.
+        dot.tabIndex = (k === viewKey) ? 0 : -1;
+
+        dot.addEventListener("click", function () {
+          viewKey = k;
+          renderChain();
+          renderArchive();
+          archiveEl.scrollIntoView({
+            behavior: prefersReducedMotion() ? "auto" : "smooth",
+            block: "start"
           });
-        }
+        });
+
+        chainDots.push(dot);
         rowEl.appendChild(dot);
       });
       chainEl.appendChild(rowEl);
     }
   }
+
+  chainEl.addEventListener("keydown", function (e) {
+    var i = chainDots.indexOf(document.activeElement);
+    if (i < 0) return;
+    var step = e.key === "ArrowRight" ? 1
+             : e.key === "ArrowLeft" ? -1
+             : e.key === "ArrowDown" ? 7
+             : e.key === "ArrowUp" ? -7 : 0;
+    if (!step) return;
+    var next = i + step;
+    if (next < 0 || next >= chainDots.length) return;
+    e.preventDefault();
+    chainDots[i].tabIndex = -1;
+    chainDots[next].tabIndex = 0;
+    chainDots[next].focus();
+  });
 
   // ---------- Abreissen und fallen lassen ----------
 
