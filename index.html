@@ -134,10 +134,11 @@
     display: grid;
     grid-template-columns: 1fr 32px 44px 32px 20px;
     gap: 4px;
-    align-items: center;
+    align-items: start;
   }
 
-  .row input {
+  .row input,
+  .row textarea {
     width: 100%;
     border: none;
     border-bottom: 1px solid var(--line);
@@ -150,8 +151,18 @@
     min-width: 0;
   }
 
-  .row input::placeholder { color: #c9c3b6; }
-  .row input:focus { border-bottom-color: var(--accent); }
+  /* Der Uebungsname darf umbrechen statt abgeschnitten zu werden -
+     ein input scrollt nur horizontal, ein textarea kann mitwachsen. */
+  .row textarea.ex-input {
+    resize: none;
+    overflow: hidden;
+    display: block;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+  }
+
+  .row input::placeholder, .row textarea::placeholder { color: #c9c3b6; }
+  .row input:focus, .row textarea:focus { border-bottom-color: var(--accent); }
   .row .ex-wrap { position: relative; }
 
   .row-remove {
@@ -747,7 +758,7 @@
     row.className = "row";
     row.innerHTML =
       '<div class="ex-wrap">' +
-        '<input class="ex-input" type="text" placeholder="Übung" autocomplete="off">' +
+        '<textarea class="ex-input" placeholder="Übung" autocomplete="off" rows="1"></textarea>' +
         '<div class="suggestions"></div>' +
       '</div>' +
       '<input class="s-input" type="text" inputmode="numeric" placeholder="Sätze">' +
@@ -766,6 +777,11 @@
     wInput.value = data.weight || "";
     rInput.value = data.reps || "";
 
+    function growExInput() {
+      exInput.style.height = "auto";
+      exInput.style.height = exInput.scrollHeight + "px";
+    }
+
     function renderSuggestions() {
       var q = exInput.value.trim().toLowerCase();
       var names = loadExerciseNames();
@@ -780,8 +796,9 @@
         item.addEventListener("mousedown", function (e) {
           e.preventDefault();
           exInput.value = n;
+          growExInput();
           suggBox.classList.remove("show");
-          wInput.focus();
+          sInput.focus();
           saveDraft();
         });
         suggBox.appendChild(item);
@@ -790,9 +807,17 @@
     }
 
     exInput.addEventListener("focus", renderSuggestions);
-    exInput.addEventListener("input", function () { renderSuggestions(); saveDraft(); });
+    exInput.addEventListener("input", function () { growExInput(); renderSuggestions(); saveDraft(); });
     exInput.addEventListener("blur", function () {
       setTimeout(function () { suggBox.classList.remove("show"); }, 120);
+    });
+    // Ein textarea legt sonst eine Zeile fuer den Zeilenumbruch an -
+    // hier soll Enter wie Tab zum naechsten Feld springen.
+    exInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        sInput.focus();
+      }
     });
 
     sInput.addEventListener("input", saveDraft);
@@ -814,6 +839,7 @@
     });
 
     rowsEl.appendChild(row);
+    growExInput();
     return row;
   }
 
@@ -1072,11 +1098,17 @@
     clone.classList.add("flying");
     clone.classList.remove("entering");
 
-    // cloneNode uebernimmt keine getippten input-Werte - die stehen nur
-    // als Property, nicht als Attribut.
-    var src = sheet.querySelectorAll("input");
-    var dst = clone.querySelectorAll("input");
-    for (var i = 0; i < src.length; i++) dst[i].setAttribute("value", src[i].value);
+    // cloneNode uebernimmt keine getippten Werte - bei input stehen sie nur
+    // als Property, bei textarea nur im urspruenglichen Kindtext.
+    var src = sheet.querySelectorAll("input, textarea");
+    var dst = clone.querySelectorAll("input, textarea");
+    for (var i = 0; i < src.length; i++) {
+      if (src[i].tagName === "TEXTAREA") {
+        dst[i].textContent = src[i].value;
+      } else {
+        dst[i].setAttribute("value", src[i].value);
+      }
+    }
 
     clone.style.position = "absolute";
     clone.style.top = (rect.top + window.scrollY) + "px";
