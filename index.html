@@ -664,6 +664,25 @@
     try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(list)); } catch (e) {}
   }
 
+  // Raeumt Namen aus der Vorschlagsliste, die zu keiner tatsaechlich
+  // abgeschlossenen Einheit gehoeren - etwa Reste aus der Zeit, bevor
+  // Vorschlaege nur noch beim Abschliessen entstanden.
+  function pruneOrphanSuggestions(data) {
+    var real = {};
+    Object.keys(data).forEach(function (k) {
+      (data[k].sessions || []).forEach(function (s) {
+        (s.rows || []).forEach(function (r) {
+          if (r.exercise) real[r.exercise.trim().toLowerCase()] = true;
+        });
+      });
+    });
+    var list = loadExerciseNames();
+    var pruned = list.filter(function (n) { return real[n.trim().toLowerCase()]; });
+    if (pruned.length !== list.length) {
+      try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(pruned)); } catch (e) {}
+    }
+  }
+
   function normalizeNumberInput(str) {
     if (!str) return "";
     return str.trim().replace(",", ".");
@@ -701,6 +720,7 @@
   }
 
   var entries = ensureIds(migrate(loadEntries()));
+  pruneOrphanSuggestions(entries);
   var todayK = dayKey();
   var viewKey = todayK;
 
