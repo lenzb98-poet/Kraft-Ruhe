@@ -132,7 +132,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: 1fr 32px 44px 32px 20px;
+    grid-template-columns: 1fr 44px 44px 40px 20px;
     gap: 4px;
     align-items: start;
   }
@@ -179,7 +179,7 @@
 
   .col-labels {
     display: grid;
-    grid-template-columns: 1fr 32px 44px 32px 20px;
+    grid-template-columns: 1fr 44px 44px 40px 20px;
     gap: 4px;
     font-size: 0.6rem;
     color: var(--ink-soft);
@@ -761,9 +761,9 @@
         '<textarea class="ex-input" placeholder="Übung" autocomplete="off" rows="1"></textarea>' +
         '<div class="suggestions"></div>' +
       '</div>' +
-      '<input class="s-input" type="text" inputmode="numeric" aria-label="Sätze">' +
+      '<input class="s-input" type="text" inputmode="numeric" placeholder="Sätze">' +
       '<input class="w-input" type="text" inputmode="decimal" placeholder="kg">' +
-      '<input class="r-input" type="text" inputmode="numeric" aria-label="Wiederholungen">' +
+      '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh.">' +
       '<button type="button" class="row-remove" title="entfernen">×</button>';
 
     var exInput = row.querySelector(".ex-input");
