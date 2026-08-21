@@ -793,7 +793,6 @@
     exInput.addEventListener("input", function () { renderSuggestions(); saveDraft(); });
     exInput.addEventListener("blur", function () {
       setTimeout(function () { suggBox.classList.remove("show"); }, 120);
-      if (exInput.value.trim()) pushExerciseName(exInput.value.trim());
     });
 
     sInput.addEventListener("input", saveDraft);
