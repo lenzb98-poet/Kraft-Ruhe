@@ -132,7 +132,7 @@
 
   .row {
     display: grid;
-    grid-template-columns: 1fr 64px 56px 26px;
+    grid-template-columns: 1fr 48px 60px 56px 26px;
     gap: 6px;
     align-items: center;
   }
@@ -167,7 +167,7 @@
 
   .col-labels {
     display: grid;
-    grid-template-columns: 1fr 64px 56px 26px;
+    grid-template-columns: 1fr 48px 60px 56px 26px;
     gap: 6px;
     font-size: 0.68rem;
     color: var(--ink-soft);
@@ -482,8 +482,8 @@
   .export-btn:hover { border-color: var(--accent); color: var(--ink); }
 
   @media (max-width: 380px) {
-    .row { grid-template-columns: 1fr 52px 46px 22px; }
-    .col-labels { grid-template-columns: 1fr 52px 46px 22px; }
+    .row { grid-template-columns: 1fr 40px 50px 46px 22px; }
+    .col-labels { grid-template-columns: 1fr 40px 50px 46px 22px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -501,7 +501,7 @@
 
   <div class="sheet-body">
     <div class="col-labels">
-      <span>&Uuml;bung</span><span>kg</span><span>Wdh.</span><span></span>
+      <span>&Uuml;bung</span><span>S&auml;tze</span><span>kg</span><span>Wdh.</span><span></span>
     </div>
     <div class="rows" id="rows"></div>
 
@@ -728,9 +728,10 @@
     var out = [];
     rowsEl.querySelectorAll(".row").forEach(function (rowEl) {
       var ex = rowEl.querySelector(".ex-input").value.trim();
+      var sets = rowEl.querySelector(".s-input").value.trim();
       var weight = rowEl.querySelector(".w-input").value.trim();
       var reps = rowEl.querySelector(".r-input").value.trim();
-      if (ex || weight || reps) out.push({ exercise: ex, weight: weight, reps: reps });
+      if (ex || sets || weight || reps) out.push({ exercise: ex, sets: sets, weight: weight, reps: reps });
     });
     return out;
   }
@@ -751,16 +752,19 @@
         '<input class="ex-input" type="text" placeholder="Übung" autocomplete="off">' +
         '<div class="suggestions"></div>' +
       '</div>' +
+      '<input class="s-input" type="text" inputmode="numeric" placeholder="Sätze">' +
       '<input class="w-input" type="text" inputmode="decimal" placeholder="kg">' +
       '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh.">' +
       '<button type="button" class="row-remove" title="entfernen">×</button>';
 
     var exInput = row.querySelector(".ex-input");
+    var sInput = row.querySelector(".s-input");
     var wInput = row.querySelector(".w-input");
     var rInput = row.querySelector(".r-input");
     var suggBox = row.querySelector(".suggestions");
 
     exInput.value = data.exercise || "";
+    sInput.value = data.sets || "";
     wInput.value = data.weight || "";
     rInput.value = data.reps || "";
 
@@ -793,6 +797,9 @@
       setTimeout(function () { suggBox.classList.remove("show"); }, 120);
       if (exInput.value.trim()) pushExerciseName(exInput.value.trim());
     });
+
+    sInput.addEventListener("input", saveDraft);
+    sInput.addEventListener("blur", saveDraft);
 
     wInput.addEventListener("input", saveDraft);
     wInput.addEventListener("blur", function () {
@@ -907,6 +914,7 @@
       var num = document.createElement("span");
       num.className = "pl-num";
       var bits = [];
+      if (r.sets) bits.push(r.sets + " Sätze");
       if (r.weight) bits.push(r.weight + " kg");
       if (r.reps) bits.push(r.reps + "×");
       num.textContent = bits.join("  ");
@@ -1215,7 +1223,7 @@
 
   document.getElementById("exportCsv").addEventListener("click", function () {
     saveDraft();
-    var lines = ["Datum,Einheit,Uhrzeit,Übung,Gewicht,Wiederholungen,Wie war's"];
+    var lines = ["Datum,Einheit,Uhrzeit,Übung,Sätze,Gewicht,Wiederholungen,Wie war's"];
     Object.keys(entries).sort().forEach(function (k) {
       var sessions = entries[k].sessions || [];
       sessions.forEach(function (s, idx) {
@@ -1223,7 +1231,7 @@
         rows.forEach(function (r) {
           lines.push([
             k, idx + 1, csvCell(s.closedAt || ""),
-            csvCell(r.exercise), csvCell(r.weight), csvCell(r.reps),
+            csvCell(r.exercise), csvCell(r.sets), csvCell(r.weight), csvCell(r.reps),
             csvCell(s.feeling || "")
           ].join(","));
         });
@@ -1268,7 +1276,7 @@
   function sessionSignature(s) {
     return (s.closedAt || "") + "|" + (s.feeling || "") + "|" +
       JSON.stringify((s.rows || []).map(function (r) {
-        return [r.exercise || "", r.weight || "", r.reps || ""];
+        return [r.exercise || "", r.sets || "", r.weight || "", r.reps || ""];
       }));
   }
 
