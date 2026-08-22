@@ -268,8 +268,10 @@
     cursor: pointer;
     font-family: inherit;
     letter-spacing: 0.01em;
+    transition: background 0.2s ease;
   }
   .finish-btn:active { opacity: 0.85; }
+  .finish-btn.confirm { background: var(--accent); }
 
   .empty-hint {
     text-align: center;
@@ -626,7 +628,10 @@
 
   // Erster Klick fragt nach, zweiter (innerhalb der Frist) fuehrt aus.
   // Ein Fehlgriff auf ein kleines Ziel soll nichts sofort zerstoeren.
-  function armConfirm(btn, confirmText, onConfirm) {
+  // guard (optional) kann den ersten Klick abfangen, bevor ueberhaupt
+  // scharf gestellt wird - fuer einen leeren Zettel gibt es nichts zu
+  // bestaetigen, da soll direkt der bestehende Hinweis erscheinen.
+  function armConfirm(btn, confirmText, onConfirm, guard) {
     var idleText = btn.textContent;
     var armed = false;
     var timer = null;
@@ -641,6 +646,7 @@
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
       if (!armed) {
+        if (guard && !guard()) return;
         armed = true;
         btn.textContent = confirmText;
         btn.classList.add("confirm");
@@ -1209,10 +1215,17 @@
     requestAnimationFrame(frame);
   }
 
-  finishBtn.addEventListener("click", function () {
+  function guardSheetNotEmpty() {
+    if (collectRows().length || feelingInput.value.trim()) return true;
+    emptyHint.classList.add("show");
+    return false;
+  }
+
+  armConfirm(finishBtn, "wirklich?", function () {
     var rows = collectRows();
     var feeling = feelingInput.value.trim();
 
+    // Kann sich zwischen den beiden Klicks noch geaendert haben.
     if (!rows.length && !feeling) {
       emptyHint.classList.add("show");
       return;
@@ -1244,7 +1257,7 @@
         sheet.classList.add("entering");
       }, 550);
     });
-  });
+  }, guardSheetNotEmpty);
 
   // ---------- Export ----------
 
