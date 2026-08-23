@@ -670,6 +670,27 @@
     try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(list)); } catch (e) {}
   }
 
+  // Sucht die zuletzt eingetragenen Saetze/kg/Wdh. fuer eine Uebung -
+  // neuester Tag zuerst, innerhalb des Tages die zuletzt abgeschlossene
+  // Einheit zuerst, erste passende Zeile darin gewinnt.
+  function findLastValuesForExercise(name) {
+    var target = (name || "").trim().toLowerCase();
+    if (!target) return null;
+    var days = Object.keys(entries).sort().reverse();
+    for (var i = 0; i < days.length; i++) {
+      var sessions = entries[days[i]].sessions || [];
+      for (var j = sessions.length - 1; j >= 0; j--) {
+        var rows = sessions[j].rows || [];
+        for (var k = 0; k < rows.length; k++) {
+          if ((rows[k].exercise || "").trim().toLowerCase() === target) {
+            return { sets: rows[k].sets || "", weight: rows[k].weight || "", reps: rows[k].reps || "" };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   // Raeumt Namen aus der Vorschlagsliste, die zu keiner tatsaechlich
   // abgeschlossenen Einheit gehoeren - etwa Reste aus der Zeit, bevor
   // Vorschlaege nur noch beim Abschliessen entstanden.
@@ -824,6 +845,15 @@
           exInput.value = n;
           growExInput();
           suggBox.classList.remove("show");
+
+          // Nur leere Felder auffuellen - schon Getipptes bleibt unangetastet.
+          var last = findLastValuesForExercise(n);
+          if (last) {
+            if (!sInput.value.trim() && last.sets) sInput.value = last.sets;
+            if (!wInput.value.trim() && last.weight) wInput.value = last.weight;
+            if (!rInput.value.trim() && last.reps) rInput.value = last.reps;
+          }
+
           sInput.focus();
           saveDraft();
         });
@@ -832,10 +862,20 @@
       suggBox.classList.add("show");
     }
 
-    exInput.addEventListener("focus", renderSuggestions);
+    var hideSuggTimer = null;
+
+    exInput.addEventListener("focus", function () {
+      clearTimeout(hideSuggTimer);
+      renderSuggestions();
+    });
     exInput.addEventListener("input", function () { growExInput(); renderSuggestions(); saveDraft(); });
     exInput.addEventListener("blur", function () {
-      setTimeout(function () { suggBox.classList.remove("show"); }, 120);
+      // Verzoegert, damit ein mousedown auf einen Vorschlag (der blur
+      // zuvorkommt) noch greifen kann. Ein schnelles Zurueckfokussieren
+      // muss diesen Timer canceln, sonst reisst er die gerade neu
+      // angezeigte Liste wieder weg.
+      clearTimeout(hideSuggTimer);
+      hideSuggTimer = setTimeout(function () { suggBox.classList.remove("show"); }, 120);
     });
     // Ein textarea legt sonst eine Zeile fuer den Zeilenumbruch an -
     // hier soll Enter wie Tab zum naechsten Feld springen.
