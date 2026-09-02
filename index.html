@@ -221,12 +221,19 @@
     border-radius: 10px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.08);
     z-index: 20;
-    max-height: 45vh;
+    max-height: 60vh;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
     display: none;
   }
   .suggestions.show { display: block; }
+  /* Weicher Rand nach unten, solange noch etwas ausserhalb liegt -
+     sonst sieht eine scrollbare Liste aus wie eine vollstaendige. */
+  .suggestions.has-more {
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+  }
   .suggestions div {
     padding: 8px 10px;
     font-size: 0.88rem;
@@ -830,6 +837,12 @@
       exInput.style.height = exInput.scrollHeight + "px";
     }
 
+    function updateSuggScrollHint() {
+      var more = suggBox.scrollHeight - suggBox.scrollTop - suggBox.clientHeight > 1;
+      suggBox.classList.toggle("has-more", more);
+    }
+    suggBox.addEventListener("scroll", updateSuggScrollHint);
+
     function renderSuggestions() {
       var q = exInput.value.trim().toLowerCase();
       var names = loadExerciseNames();
@@ -861,6 +874,8 @@
         suggBox.appendChild(item);
       });
       suggBox.classList.add("show");
+      suggBox.scrollTop = 0;
+      updateSuggScrollHint();
     }
 
     var hideSuggTimer = null;
