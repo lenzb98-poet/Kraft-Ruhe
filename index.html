@@ -558,7 +558,6 @@
     <button class="export-btn" id="exportJson" type="button">Export JSON</button>
     <button class="export-btn" id="exportCsv" type="button">Export CSV</button>
     <button class="export-btn" id="importBtn" type="button">Import JSON</button>
-    <button class="export-btn" id="resetSuggestBtn" type="button">Vorschläge zurücksetzen</button>
   </div>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -627,11 +626,37 @@
     return data;
   }
 
+  // Die Vorschlagsliste wird nicht gespeichert, sondern aus dem Verlauf
+  // abgeleitet: jede Uebung aus jeder abgeschlossenen Einheit, zuletzt
+  // benutzte zuerst. Dadurch ist sie immer vollstaendig und kann gar nicht
+  // erst von den echten Daten abweichen.
+  var exerciseNamesCache = null;
+
+  function invalidateExerciseNames() {
+    exerciseNamesCache = null;
+  }
+
   function loadExerciseNames() {
-    try {
-      var raw = localStorage.getItem(EXERCISES_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) { return []; }
+    if (exerciseNamesCache) return exerciseNamesCache;
+    var seen = {};
+    var out = [];
+    var days = Object.keys(entries).sort().reverse();
+    for (var i = 0; i < days.length; i++) {
+      var sessions = entries[days[i]].sessions || [];
+      for (var j = sessions.length - 1; j >= 0; j--) {
+        var rows = sessions[j].rows || [];
+        for (var k = 0; k < rows.length; k++) {
+          var name = (rows[k].exercise || "").trim();
+          if (!name) continue;
+          var key = name.toLowerCase();
+          if (seen[key]) continue;
+          seen[key] = true;
+          out.push(name);
+        }
+      }
+    }
+    exerciseNamesCache = out;
+    return out;
   }
 
   // Erster Klick fragt nach, zweiter (innerhalb der Frist) fuehrt aus.
@@ -667,17 +692,6 @@
     });
   }
 
-  function pushExerciseName(name) {
-    name = (name || "").trim();
-    if (!name) return;
-    var list = loadExerciseNames();
-    var lower = name.toLowerCase();
-    list = list.filter(function (n) { return n.toLowerCase() !== lower; });
-    list.unshift(name);
-    if (list.length > 200) list = list.slice(0, 200);
-    try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(list)); } catch (e) {}
-  }
-
   // Sucht die zuletzt eingetragenen Saetze/kg/Wdh. fuer eine Uebung -
   // neuester Tag zuerst, innerhalb des Tages die zuletzt abgeschlossene
   // Einheit zuerst, erste passende Zeile darin gewinnt.
@@ -697,25 +711,6 @@
       }
     }
     return null;
-  }
-
-  // Raeumt Namen aus der Vorschlagsliste, die zu keiner tatsaechlich
-  // abgeschlossenen Einheit gehoeren - etwa Reste aus der Zeit, bevor
-  // Vorschlaege nur noch beim Abschliessen entstanden.
-  function pruneOrphanSuggestions(data) {
-    var real = {};
-    Object.keys(data).forEach(function (k) {
-      (data[k].sessions || []).forEach(function (s) {
-        (s.rows || []).forEach(function (r) {
-          if (r.exercise) real[r.exercise.trim().toLowerCase()] = true;
-        });
-      });
-    });
-    var list = loadExerciseNames();
-    var pruned = list.filter(function (n) { return real[n.trim().toLowerCase()]; });
-    if (pruned.length !== list.length) {
-      try { localStorage.setItem(EXERCISES_KEY, JSON.stringify(pruned)); } catch (e) {}
-    }
   }
 
   function normalizeNumberInput(str) {
@@ -747,6 +742,7 @@
         if (sess[j].id === id) {
           sess.splice(j, 1);
           saveEntries(entries);
+          invalidateExerciseNames();
           return true;
         }
       }
@@ -755,7 +751,11 @@
   }
 
   var entries = ensureIds(migrate(loadEntries()));
-  pruneOrphanSuggestions(entries);
+
+  // Frueher lag die Vorschlagsliste separat im Speicher; sie wird jetzt aus
+  // dem Verlauf abgeleitet, der alte Schluessel wird nicht mehr gelesen.
+  try { localStorage.removeItem(EXERCISES_KEY); } catch (e) {}
+
   var todayK = dayKey();
   var viewKey = todayK;
 
@@ -1302,7 +1302,7 @@
     });
     entry.draft = { rows: [], feeling: "" };
     saveEntries(entries);
-    rows.forEach(function (r) { pushExerciseName(r.exercise); });
+    invalidateExerciseNames();
 
     // Falls gerade ein vergangener Tag angesehen wird: das Blatt gehoert nach heute.
     viewKey = todayK;
@@ -1442,15 +1442,6 @@
     return added;
   }
 
-  function seedExerciseNames(incoming) {
-    if (loadExerciseNames().length) return;
-    Object.keys(incoming).sort().forEach(function (k) {
-      (incoming[k].sessions || []).forEach(function (s) {
-        (s.rows || []).forEach(function (r) { pushExerciseName(r.exercise); });
-      });
-    });
-  }
-
   function importJson(text) {
     var parsed;
     try {
@@ -1473,8 +1464,8 @@
       return;
     }
 
-    seedExerciseNames(incoming);
     saveEntries(entries);
+    invalidateExerciseNames();
     loadDraftIntoSheet();
     renderChain();
     renderArchive();
@@ -1504,12 +1495,6 @@
       setIoOpen(false);
       ioToggle.focus();
     }
-  });
-
-  var resetSuggestBtn = document.getElementById("resetSuggestBtn");
-  armConfirm(resetSuggestBtn, "wirklich?", function () {
-    try { localStorage.removeItem(EXERCISES_KEY); } catch (e) {}
-    showNote("Vorschlagsliste geleert.");
   });
 
   var importFile = document.getElementById("importFile");
