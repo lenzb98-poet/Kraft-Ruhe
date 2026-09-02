@@ -49,6 +49,7 @@
     --accent-soft: #ede8dd;
     --dot-filled: #b7a98f;
     --dot-empty: #e8e3d9;
+    --sugg-row: 32px;
   }
 
   * { box-sizing: border-box; }
@@ -221,7 +222,10 @@
     border-radius: 10px;
     box-shadow: 0 6px 18px rgba(0,0,0,0.08);
     z-index: 20;
-    max-height: 60vh;
+    /* Neun Zeilen plus ein Streifen der zehnten - die schaut hervor und
+       zeigt damit, dass sich die Liste scrollen laesst. Aus der festen
+       Zeilenhoehe gerechnet, damit es auf jedem Geraet neun bleiben. */
+    max-height: calc(var(--sugg-row) * 9 + 10px);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
@@ -231,11 +235,14 @@
   /* Weicher Rand nach unten, solange noch etwas ausserhalb liegt -
      sonst sieht eine scrollbare Liste aus wie eine vollstaendige. */
   .suggestions.has-more {
-    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
-    mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
   }
   .suggestions div {
-    padding: 8px 10px;
+    height: var(--sugg-row);
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
     font-size: 0.88rem;
     cursor: pointer;
   }
