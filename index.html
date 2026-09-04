@@ -238,13 +238,19 @@
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
     mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
   }
+  /* Jeder Vorschlag bleibt streng einzeilig: sonst waechst eine Zeile mit
+     langem Namen ueber ihre feste Hoehe hinaus und ueberlappt die Nachbarn.
+     line-height = height zentriert dabei senkrecht, ohne Flexbox - so
+     greifen overflow und text-overflow wie vorgesehen. */
   .suggestions div {
     height: var(--sugg-row);
+    line-height: var(--sugg-row);
     padding: 0 10px;
-    display: flex;
-    align-items: center;
     font-size: 0.88rem;
     cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .suggestions div:hover, .suggestions div.active { background: var(--accent-soft); }
 
