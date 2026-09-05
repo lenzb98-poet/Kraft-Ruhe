@@ -831,7 +831,7 @@
       '</div>' +
       '<input class="s-input" type="text" inputmode="numeric" placeholder="Sätze">' +
       '<input class="w-input" type="text" inputmode="decimal" placeholder="kg">' +
-      '<input class="r-input" type="text" inputmode="numeric" placeholder="Wdh.">' +
+      '<input class="r-input" type="text" inputmode="decimal" placeholder="Wdh.">' +
       '<button type="button" class="row-remove" title="entfernen">×</button>';
 
     var exInput = row.querySelector(".ex-input");
@@ -925,7 +925,10 @@
     });
 
     rInput.addEventListener("input", saveDraft);
-    rInput.addEventListener("blur", saveDraft);
+    rInput.addEventListener("blur", function () {
+      rInput.value = normalizeNumberInput(rInput.value);
+      saveDraft();
+    });
 
     row.querySelector(".row-remove").addEventListener("click", function () {
       row.remove();
