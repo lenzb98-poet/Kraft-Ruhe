@@ -166,7 +166,9 @@
   .row input:focus, .row textarea:focus { border-bottom-color: var(--accent); }
   .row .ex-wrap { position: relative; }
 
-  .row-remove {
+  .row-menu-wrap { position: relative; }
+
+  .row-menu {
     background: none;
     border: none;
     color: #c9c3b6;
@@ -175,8 +177,164 @@
     padding: 4px 0;
     line-height: 1;
     width: 100%;
+    letter-spacing: 0.08em;
   }
-  .row-remove:hover { color: var(--ink-soft); }
+  .row-menu:hover, .row-menu.open { color: var(--ink-soft); }
+
+  .row-pop {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    min-width: 150px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    z-index: 30;
+    overflow: hidden;
+    display: none;
+  }
+  .row-pop.show { display: block; }
+  .row-pop button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.88rem;
+    color: var(--ink);
+    padding: 10px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .row-pop button:hover:not(:disabled) { background: var(--accent-soft); }
+  .row-pop button:disabled { color: #c9c3b6; cursor: default; }
+
+  /* ---------- Verlauf einer Uebung ---------- */
+
+  .stats-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(46, 43, 38, 0.28);
+    z-index: 80;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stats-overlay.show { display: flex; }
+
+  .stats-card {
+    width: 100%;
+    max-width: 480px;
+    background: var(--paper);
+    border-radius: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.08);
+    padding: 22px 20px 20px;
+  }
+
+  .stats-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 2px;
+  }
+  .stats-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: break-word;
+    min-width: 0;
+  }
+  .stats-close {
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .stats-sub {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-bottom: 16px;
+  }
+
+  .chart-wrap { position: relative; }
+  .c-grid { stroke: var(--line); }
+  .c-axis { fill: var(--ink-soft); }
+  .c-dot { stroke: var(--paper); }
+  .c-endlab { fill: var(--ink); }
+  .c-hair { stroke: var(--ink-soft); }
+  .chart-wrap svg { display: block; }
+
+  /* Der Messwert fuehrt, die Beschriftung folgt. */
+  .chart-tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    padding: 7px 9px;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+  .chart-tip.show { opacity: 1; }
+  .chart-tip .tip-val {
+    font-weight: 600;
+    color: var(--ink);
+    font-size: 0.9rem;
+  }
+  .chart-tip .tip-lab { color: var(--ink-soft); }
+
+  .stats-table-title {
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 20px 0 8px;
+  }
+  .stats-table-scroll { max-height: 180px; overflow-y: auto; }
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .stats-table th {
+    text-align: left;
+    font-weight: 500;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    padding: 0 0 6px;
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+  }
+  .stats-table td {
+    padding: 6px 0;
+    border-top: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .stats-table td + td, .stats-table th + th { text-align: right; }
+  .stats-empty {
+    color: var(--ink-soft);
+    font-style: italic;
+    font-size: 0.88rem;
+    padding: 10px 0;
+  }
 
   .col-labels {
     display: grid;
@@ -576,6 +734,19 @@
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 <div class="io-note" id="ioNote"></div>
 
+<div class="stats-overlay" id="statsOverlay" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+  <div class="stats-card">
+    <div class="stats-head">
+      <div class="stats-title" id="statsTitle"></div>
+      <button class="stats-close" id="statsClose" type="button" aria-label="Schlie&szlig;en">&times;</button>
+    </div>
+    <div class="stats-sub" id="statsSub"></div>
+    <div class="chart-wrap" id="chartWrap"></div>
+    <div class="stats-table-title">alle Eintr&auml;ge</div>
+    <div class="stats-table-scroll" id="statsTableWrap"></div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -726,6 +897,28 @@
     return null;
   }
 
+  // Alle festgehaltenen Zeilen zu einer Uebung, aelteste zuerst.
+  function collectExerciseHistory(name) {
+    var target = (name || "").trim().toLowerCase();
+    if (!target) return [];
+    var out = [];
+    Object.keys(entries).sort().forEach(function (dayK) {
+      (entries[dayK].sessions || []).forEach(function (s) {
+        (s.rows || []).forEach(function (r) {
+          if ((r.exercise || "").trim().toLowerCase() !== target) return;
+          out.push({
+            day: dayK,
+            time: s.closedAt || "",
+            sets: r.sets || "",
+            weight: r.weight || "",
+            reps: r.reps || ""
+          });
+        });
+      });
+    });
+    return out;
+  }
+
   function normalizeNumberInput(str) {
     if (!str) return "";
     return str.trim().replace(",", ".");
@@ -832,7 +1025,13 @@
       '<input class="s-input" type="text" inputmode="numeric" placeholder="Sätze">' +
       '<input class="w-input" type="text" inputmode="decimal" placeholder="kg">' +
       '<input class="r-input" type="text" inputmode="decimal" placeholder="Wdh.">' +
-      '<button type="button" class="row-remove" title="entfernen">×</button>';
+      '<div class="row-menu-wrap">' +
+        '<button type="button" class="row-menu" aria-label="Mehr" aria-haspopup="true" aria-expanded="false">⋯</button>' +
+        '<div class="row-pop">' +
+          '<button type="button" class="pop-stats">Verlauf ansehen</button>' +
+          '<button type="button" class="pop-delete">Zeile löschen</button>' +
+        '</div>' +
+      '</div>';
 
     var exInput = row.querySelector(".ex-input");
     var sInput = row.querySelector(".s-input");
@@ -930,7 +1129,44 @@
       saveDraft();
     });
 
-    row.querySelector(".row-remove").addEventListener("click", function () {
+    var menuBtn = row.querySelector(".row-menu");
+    var popBox = row.querySelector(".row-pop");
+    var statsBtn = row.querySelector(".pop-stats");
+    var deleteBtn = row.querySelector(".pop-delete");
+
+    function closeMenu() {
+      popBox.classList.remove("show");
+      menuBtn.classList.remove("open");
+      menuBtn.setAttribute("aria-expanded", "false");
+    }
+
+    menuBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      var wasOpen = popBox.classList.contains("show");
+      closeAllRowMenus();
+      if (wasOpen) return;
+
+      // Ohne festgehaltene Einheiten gibt es nichts zu zeigen.
+      var name = exInput.value.trim();
+      var hasHistory = name && collectExerciseHistory(name).length > 0;
+      statsBtn.disabled = !hasHistory;
+      statsBtn.title = hasHistory ? "" : "noch nichts festgehalten";
+
+      popBox.classList.add("show");
+      menuBtn.classList.add("open");
+      menuBtn.setAttribute("aria-expanded", "true");
+    });
+
+    statsBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (statsBtn.disabled) return;
+      closeMenu();
+      openStats(exInput.value.trim());
+    });
+
+    deleteBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      closeMenu();
       row.remove();
       if (!rowsEl.children.length) createRow();
       saveDraft();
@@ -970,6 +1206,21 @@
       if (s.parentNode && s.parentNode.contains(document.activeElement)) return;
       s.classList.remove("show");
     });
+  });
+
+  function closeAllRowMenus() {
+    document.querySelectorAll(".row-pop.show").forEach(function (pop) {
+      pop.classList.remove("show");
+      var btn = pop.parentNode.querySelector(".row-menu");
+      if (btn) {
+        btn.classList.remove("open");
+        btn.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+
+  document.addEventListener("click", function (e) {
+    if (!e.target.closest(".row-menu-wrap")) closeAllRowMenus();
   });
 
   // ---------- Abgerissene Blaetter ----------
@@ -1549,6 +1800,297 @@
   setInterval(checkDayRollover, 60000);
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) checkDayRollover();
+  });
+
+  // ---------- Verlauf einer Uebung ----------
+
+  var SERIES = "#8f8064";            // traegt >= 3:1 gegen das Blatt
+  var statsOverlay = document.getElementById("statsOverlay");
+  var statsTitle = document.getElementById("statsTitle");
+  var statsSub = document.getElementById("statsSub");
+  var chartWrap = document.getElementById("chartWrap");
+  var statsTableWrap = document.getElementById("statsTableWrap");
+  var statsCurrent = null;
+
+  function dayToDate(k) {
+    var p = k.split("-");
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+
+  function shortDate(k) {
+    var d = dayToDate(k);
+    return d.getDate() + ". " + MONTHS[d.getMonth()].slice(0, 3);
+  }
+
+  function num(v) {
+    if (v === "" || v == null) return null;
+    var n = parseFloat(String(v).replace(",", "."));
+    return isFinite(n) ? n : null;
+  }
+
+  function fmt(n) {
+    return String(Math.round(n * 100) / 100).replace(".", ",");
+  }
+
+  // Achsenteilung auf runde Zahlen.
+  function niceTicks(lo, hi, count) {
+    if (hi === lo) { lo = Math.max(0, lo - 1); hi = hi + 1; }
+    var raw = (hi - lo) / count;
+    var mag = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10));
+    var norm = raw / mag;
+    var step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+    var start = Math.floor(lo / step) * step;
+    var end = Math.ceil(hi / step) * step;
+    var ticks = [];
+    for (var v = start; v <= end + step / 1000; v += step) ticks.push(Math.round(v * 1000) / 1000);
+    return ticks;
+  }
+
+  function svgEl(name, attrs) {
+    var el = document.createElementNS("http://www.w3.org/2000/svg", name);
+    Object.keys(attrs || {}).forEach(function (k) { el.setAttribute(k, attrs[k]); });
+    return el;
+  }
+
+  function renderChart(history, metric, unit) {
+    chartWrap.innerHTML = "";
+
+    var pts = [];
+    history.forEach(function (h) {
+      var v = num(metric === "weight" ? h.weight : h.reps);
+      if (v === null) return;
+      pts.push({ v: v, t: dayToDate(h.day).getTime(), h: h });
+    });
+    if (!pts.length) return;
+
+    var W = Math.max(240, chartWrap.clientWidth || 300);
+    var padL = 42, padR = 16, padT = 26, padB = 26;
+    var plotH = 190;
+    var H = plotH + padT + padB;          // Achsenband gehoert in die Hoehe
+    var innerW = W - padL - padR;
+
+    var vals = pts.map(function (p) { return p.v; });
+    var ticks = niceTicks(Math.min.apply(null, vals), Math.max.apply(null, vals), 4);
+    var yLo = ticks[0], yHi = ticks[ticks.length - 1];
+
+    var tMin = pts[0].t, tMax = pts[pts.length - 1].t;
+    function xOf(t) {
+      if (tMax === tMin) return padL + innerW / 2;
+      return padL + ((t - tMin) / (tMax - tMin)) * innerW;
+    }
+    function yOf(v) {
+      return padT + plotH - ((v - yLo) / (yHi - yLo)) * plotH;
+    }
+
+    var svg = svgEl("svg", { width: W, height: H, viewBox: "0 0 " + W + " " + H, role: "img" });
+    svg.appendChild(svgEl("title", {})).textContent =
+      metric === "weight" ? "Gewicht über die Zeit" : "Wiederholungen über die Zeit";
+
+    // Gitter: haarfein, durchgezogen, zuruecktretend
+    ticks.forEach(function (t) {
+      var y = yOf(t);
+      svg.appendChild(svgEl("line", {
+        x1: padL, y1: y, x2: W - padR, y2: y,
+        class: "c-grid", "stroke-width": 1
+      }));
+      var lab = svgEl("text", {
+        x: padL - 8, y: y + 3.5, "text-anchor": "end", class: "c-axis",
+        "font-size": 10, "font-variant-numeric": "tabular-nums"
+      });
+      lab.textContent = fmt(t);
+      svg.appendChild(lab);
+    });
+
+    // Datumsmarken: erste, letzte, ggf. Mitte
+    var xIdx = pts.length > 2 ? [0, Math.floor((pts.length - 1) / 2), pts.length - 1] : [0, pts.length - 1];
+    var seenX = {};
+    xIdx.forEach(function (i) {
+      if (seenX[i]) return;
+      seenX[i] = true;
+      var p = pts[i];
+      var anchor = i === 0 ? "start" : (i === pts.length - 1 ? "end" : "middle");
+      var lab = svgEl("text", {
+        x: xOf(p.t), y: H - 8, "text-anchor": pts.length === 1 ? "middle" : anchor,
+        "font-size": 10, class: "c-axis"
+      });
+      lab.textContent = shortDate(p.h.day);
+      svg.appendChild(lab);
+    });
+
+    if (pts.length > 1) {
+      var d = pts.map(function (p, i) { return (i ? "L" : "M") + xOf(p.t) + " " + yOf(p.v); }).join(" ");
+      // Flaeche als leiser Hauch, nicht als satter Block
+      svg.appendChild(svgEl("path", {
+        d: d + " L" + xOf(pts[pts.length - 1].t) + " " + (padT + plotH) +
+           " L" + xOf(pts[0].t) + " " + (padT + plotH) + " Z",
+        fill: SERIES, "fill-opacity": 0.1, stroke: "none"
+      }));
+      svg.appendChild(svgEl("path", {
+        d: d, fill: "none", stroke: SERIES, "stroke-width": 2,
+        "stroke-linejoin": "round", "stroke-linecap": "round"
+      }));
+    }
+
+    // Punkte mit 2px Ring in Flaechenfarbe
+    pts.forEach(function (p) {
+      svg.appendChild(svgEl("circle", {
+        cx: xOf(p.t), cy: yOf(p.v), r: 4.5, class: "c-dot",
+        fill: SERIES, "stroke-width": 2
+      }));
+    });
+
+    // Nur der letzte Wert wird direkt beschriftet
+    // Endwert senkrecht vom Punkt abgesetzt, damit die Schrift ihn nie beruehrt,
+    // und am Rand umgeschwenkt, damit sie nicht ueber die Zeichenflaeche laeuft.
+    var last = pts[pts.length - 1];
+    var lx = xOf(last.t), ly = yOf(last.v);
+    var oben = ly - 14 >= 11;
+    var anker = "middle", tx = lx;
+    if (lx > W - padR - 30) { anker = "end"; tx = W - padR; }
+    else if (lx < padL + 30) { anker = "start"; tx = padL; }
+    var endLab = svgEl("text", {
+      x: tx,
+      y: oben ? ly - 14 : ly + 20,
+      "text-anchor": anker,
+      "font-size": 11, "font-weight": 600, class: "c-endlab"
+    });
+    endLab.textContent = fmt(last.v) + " " + unit;
+    svg.appendChild(endLab);
+
+    var hair = svgEl("line", {
+      x1: 0, y1: padT, x2: 0, y2: padT + plotH,
+      class: "c-hair", "stroke-width": 1, opacity: 0
+    });
+    svg.appendChild(hair);
+
+    chartWrap.appendChild(svg);
+
+    var tip = document.createElement("div");
+    tip.className = "chart-tip";
+    chartWrap.appendChild(tip);
+
+    // Der Zeiger muss nur am naechsten liegen, nicht treffen.
+    function showAt(clientX) {
+      var box = svg.getBoundingClientRect();
+      var x = clientX - box.left;
+      var best = 0, bestD = Infinity;
+      pts.forEach(function (p, i) {
+        var d = Math.abs(xOf(p.t) - x);
+        if (d < bestD) { bestD = d; best = i; }
+      });
+      var p = pts[best];
+      hair.setAttribute("x1", xOf(p.t));
+      hair.setAttribute("x2", xOf(p.t));
+      hair.setAttribute("opacity", 0.35);
+
+      tip.innerHTML = "";
+      var v = document.createElement("div");
+      v.className = "tip-val";
+      v.textContent = fmt(p.v) + " " + unit;
+      var l = document.createElement("div");
+      l.className = "tip-lab";
+      var teile = [shortDate(p.h.day)];
+      if (p.h.sets) teile.push(p.h.sets + " Sätze");
+      if (metric === "weight" && p.h.reps) teile.push(p.h.reps + "×");
+      if (metric === "reps" && p.h.weight) teile.push(p.h.weight + " kg");
+      l.textContent = teile.join(" · ");
+      tip.appendChild(v);
+      tip.appendChild(l);
+      tip.classList.add("show");
+
+      var tw = tip.offsetWidth, th = tip.offsetHeight;
+      var tx = Math.min(Math.max(xOf(p.t) - tw / 2, 0), W - tw);
+      var ty = Math.max(yOf(p.v) - th - 12, 0);
+      tip.style.left = tx + "px";
+      tip.style.top = ty + "px";
+    }
+
+    function hide() {
+      hair.setAttribute("opacity", 0);
+      tip.classList.remove("show");
+    }
+
+    svg.addEventListener("pointermove", function (e) { showAt(e.clientX); });
+    svg.addEventListener("pointerdown", function (e) { showAt(e.clientX); });
+    svg.addEventListener("pointerleave", hide);
+  }
+
+  function renderStatsTable(history, metric) {
+    statsTableWrap.innerHTML = "";
+    var table = document.createElement("table");
+    table.className = "stats-table";
+
+    var thead = document.createElement("thead");
+    var hr = document.createElement("tr");
+    ["Datum", "Sätze", "kg", "Wdh."].forEach(function (t) {
+      var th = document.createElement("th");
+      th.textContent = t;
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    history.slice().reverse().forEach(function (h) {
+      var tr = document.createElement("tr");
+      var kgT = num(h.weight) === null ? "–" : fmt(num(h.weight));
+      var wdhT = num(h.reps) === null ? "–" : fmt(num(h.reps));
+      [shortDate(h.day), h.sets || "–", kgT, wdhT].forEach(function (t) {
+        var td = document.createElement("td");
+        td.textContent = t;
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    statsTableWrap.appendChild(table);
+  }
+
+  function openStats(name) {
+    var history = collectExerciseHistory(name);
+    statsCurrent = { name: name, history: history };
+
+    statsTitle.textContent = name;
+
+    var hatGewicht = history.some(function (h) { return num(h.weight) !== null; });
+    var metric = hatGewicht ? "weight" : "reps";
+    var unit = hatGewicht ? "kg" : "×";
+
+    var tage = {};
+    history.forEach(function (h) { tage[h.day] = true; });
+    var anzTage = Object.keys(tage).length;
+    statsSub.textContent = (hatGewicht ? "Gewicht" : "Wiederholungen") + " · " +
+      history.length + (history.length === 1 ? " Eintrag" : " Einträge") + " an " +
+      anzTage + (anzTage === 1 ? " Tag" : " Tagen");
+
+    statsOverlay.classList.add("show");
+    renderChart(history, metric, unit);
+    renderStatsTable(history, metric);
+    statsClose.focus();
+  }
+
+  function closeStats() {
+    statsOverlay.classList.remove("show");
+    statsCurrent = null;
+  }
+
+  var statsClose = document.getElementById("statsClose");
+  statsClose.addEventListener("click", closeStats);
+  statsOverlay.addEventListener("click", function (e) {
+    if (e.target === statsOverlay) closeStats();
+  });
+  // Escape schliesst das Oberste: erst den Verlauf, sonst ein offenes Zeilenmenue.
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (statsOverlay.classList.contains("show")) { closeStats(); return; }
+    closeAllRowMenus();
+  });
+
+  // Breite aendert sich (Drehen des Geraets) - neu zeichnen
+  window.addEventListener("resize", function () {
+    if (!statsCurrent) return;
+    var hatGewicht = statsCurrent.history.some(function (h) { return num(h.weight) !== null; });
+    renderChart(statsCurrent.history, hatGewicht ? "weight" : "reps", hatGewicht ? "kg" : "×");
   });
 
   // ---------- Start ----------
