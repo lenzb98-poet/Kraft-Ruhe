@@ -1049,6 +1049,28 @@
       exInput.style.height = exInput.scrollHeight + "px";
     }
 
+    // Was der letzte Vorschlag in die Zahlenfelder geschrieben hat. Nur solche
+    // Werte darf ein naechster Vorschlag ersetzen - oder leeren, wenn er selbst
+    // nichts dazu kennt. Selbst Getipptes bleibt unangetastet.
+    var prefilled = { sets: null, weight: null, reps: null };
+    var numFields = [[sInput, "sets"], [wInput, "weight"], [rInput, "reps"]];
+
+    function applyPrefill(last) {
+      numFields.forEach(function (pair) {
+        var el = pair[0], key = pair[1];
+        var cur = el.value.trim();
+        var neu = (last && last[key]) ? last[key] : "";
+        if (cur !== "" && cur !== prefilled[key]) return;
+        el.value = neu;
+        prefilled[key] = neu === "" ? null : neu;
+      });
+    }
+
+    // Sobald von Hand geaendert wird, gehoert der Wert dem Nutzer.
+    numFields.forEach(function (pair) {
+      pair[0].addEventListener("input", function () { prefilled[pair[1]] = null; });
+    });
+
     function updateSuggScrollHint() {
       var more = suggBox.scrollHeight - suggBox.scrollTop - suggBox.clientHeight > 1;
       suggBox.classList.toggle("has-more", more);
@@ -1072,13 +1094,7 @@
           growExInput();
           suggBox.classList.remove("show");
 
-          // Nur leere Felder auffuellen - schon Getipptes bleibt unangetastet.
-          var last = findLastValuesForExercise(n);
-          if (last) {
-            if (!sInput.value.trim() && last.sets) sInput.value = last.sets;
-            if (!wInput.value.trim() && last.weight) wInput.value = last.weight;
-            if (!rInput.value.trim() && last.reps) rInput.value = last.reps;
-          }
+          applyPrefill(findLastValuesForExercise(n));
 
           sInput.focus();
           saveDraft();
