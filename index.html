@@ -1102,6 +1102,7 @@
           if ((r.exercise || "").trim().toLowerCase() !== target) return;
           out.push({
             day: dayK,
+            sid: s.id || (dayK + "|" + (s.closedAt || "")),
             time: s.closedAt || "",
             sets: r.sets || "",
             weight: r.weight || "",
@@ -1786,7 +1787,7 @@
     // Falls gerade ein vergangener Tag angesehen wird: das Blatt gehoert nach heute.
     viewKey = todayK;
 
-    var zielErreicht = markGoalsReached(rows);
+    var zielErreicht = goalHitBy(rows);
     renderGoalBoard();
     renderGoalSetup();
 
@@ -1967,7 +1968,7 @@
         if (doppelt) return;
         goals.push({ id: g.id || makeId(), exercise: String(g.exercise),
                      metric: g.metric === "reps" ? "reps" : "weight",
-                     target: num(g.target) || 0, reachedOn: g.reachedOn || null });
+                     target: num(g.target) || 0 });
         neueZiele++;
       });
       if (neueZiele) saveGoals(goals);
@@ -2355,7 +2356,14 @@
     try {
       var raw = localStorage.getItem(GOALS_KEY);
       var list = raw ? JSON.parse(raw) : [];
-      return Array.isArray(list) ? list : [];
+      if (!Array.isArray(list)) return [];
+      // Frueher stand der Status im Ziel selbst; er wird jetzt abgeleitet.
+      var alt = false;
+      list.forEach(function (g) {
+        if ("reachedOn" in g) { delete g.reachedOn; alt = true; }
+      });
+      if (alt) { try { localStorage.setItem(GOALS_KEY, JSON.stringify(list)); } catch (e) {} }
+      return list;
     } catch (e) { return []; }
   }
 
@@ -2375,26 +2383,29 @@
   function metricLabel(m) { return m === "weight" ? "kg" : "×"; }
 
   // Wie weit die letzte Einheit mit dieser Uebung gekommen ist.
+  // Erreicht heisst: die zuletzt festgehaltene Einheit mit dieser Uebung hat
+  // das Ziel getroffen. Nichts davon wird gespeichert - faellt eine spaetere
+  // Einheit darunter oder wird die erreichende geloescht, steht das Ziel von
+  // selbst wieder offen.
   function goalProgress(goal) {
     var hist = collectExerciseHistory(goal.exercise);
-    if (!hist.length) return { last: null, pct: 0 };
-    var letzterTag = hist[hist.length - 1].day;
-    var letzteZeit = hist[hist.length - 1].time;
+    if (!hist.length) return { last: null, pct: 0, reached: false };
+    var letzteEinheit = hist[hist.length - 1].sid;
     var best = null;
     hist.forEach(function (h) {
-      if (h.day !== letzterTag || h.time !== letzteZeit) return;
+      if (h.sid !== letzteEinheit) return;
       var v = num(goal.metric === "weight" ? h.weight : h.reps);
       if (v !== null && (best === null || v > best)) best = v;
     });
     var pct = (best === null || !goal.target) ? 0 : Math.max(0, Math.min(1, best / goal.target));
-    return { last: best, pct: pct };
+    return { last: best, pct: pct, reached: best !== null && best >= goal.target };
   }
 
   function renderGoalBoard() {
     goalBoard.innerHTML = "";
     goals.forEach(function (g) {
       var p = goalProgress(g);
-      var erreicht = !!g.reachedOn;
+      var erreicht = p.reached;
 
       var line = document.createElement("div");
       line.className = "goal-line" + (erreicht ? " done" : "");
@@ -2406,7 +2417,8 @@
       var rest = document.createElement("span");
       rest.className = "gl-rest";
       if (erreicht) {
-        rest.textContent = "Ziel " + fmt(g.target) + " " + metricLabel(g.metric) + " · erreicht";
+        rest.textContent = "zuletzt " + fmt(p.last) + " von " + fmt(g.target) + " " +
+                           metricLabel(g.metric) + " · erreicht";
       } else if (p.last === null) {
         rest.textContent = "Ziel " + fmt(g.target) + " " + metricLabel(g.metric) + " · noch nichts festgehalten";
       } else {
@@ -2460,7 +2472,8 @@
 
       var target = document.createElement("span");
       target.className = "gi-target";
-      target.textContent = fmt(g.target) + " " + metricLabel(g.metric) + (g.reachedOn ? " · erreicht" : "");
+      target.textContent = fmt(g.target) + " " + metricLabel(g.metric) +
+        (goalProgress(g).reached ? " · erreicht" : "");
 
       var del = document.createElement("button");
       del.type = "button";
@@ -2502,7 +2515,7 @@
     });
     if (schonDa) { showGoalNote("Dafür gibt es schon ein Ziel."); return; }
 
-    goals.push({ id: makeId(), exercise: name, metric: metric, target: wert, reachedOn: null });
+    goals.push({ id: makeId(), exercise: name, metric: metric, target: wert });
     saveGoals(goals);
     goalTarget.value = "";
     renderGoalSetup();
@@ -2510,24 +2523,18 @@
     showGoalNote("Ziel gesetzt.");
   });
 
-  // Prueft die gerade abgeschlossenen Zeilen gegen die offenen Ziele.
-  function markGoalsReached(rows) {
-    var neuErreicht = false;
-    goals.forEach(function (g) {
-      if (g.reachedOn) return;
+  // Trifft die gerade abgeschlossene Einheit eines der Ziele? Jedes Mal, nicht
+  // nur beim ersten Mal - das Ziel gilt danach wieder als erreicht.
+  function goalHitBy(rows) {
+    return goals.some(function (g) {
       var best = null;
       rows.forEach(function (r) {
         if ((r.exercise || "").trim().toLowerCase() !== g.exercise.trim().toLowerCase()) return;
         var v = num(g.metric === "weight" ? r.weight : r.reps);
         if (v !== null && (best === null || v > best)) best = v;
       });
-      if (best !== null && best >= g.target) {
-        g.reachedOn = todayK;
-        neuErreicht = true;
-      }
+      return best !== null && best >= g.target;
     });
-    if (neuErreicht) saveGoals(goals);
-    return neuErreicht;
   }
 
   // Ein Regenbogen einmal um die Blattkante, bevor es abgerissen wird.
