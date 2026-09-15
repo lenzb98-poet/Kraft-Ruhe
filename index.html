@@ -50,6 +50,7 @@
     --dot-filled: #b7a98f;
     --dot-empty: #e8e3d9;
     --sugg-row: 32px;
+    --goal-done: #7a9a6b;
   }
 
   * { box-sizing: border-box; }
@@ -335,6 +336,179 @@
     font-size: 0.88rem;
     padding: 10px 0;
   }
+
+  /* ---------- Ziele ---------- */
+
+  .goal-board:empty { display: none; }
+  .goal-board { margin-top: 14px; }
+
+  .goal-line {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    margin-bottom: 4px;
+  }
+  .goal-line .gl-name {
+    color: var(--ink);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .goal-line .gl-rest { margin-left: auto; white-space: nowrap; }
+  .goal-line.done .gl-rest { color: var(--accent); }
+
+  /* Ein Anteil gegen eine Grenze: Fuellung und Bahn aus derselben Reihe. */
+  .goal-meter {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--accent-soft);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .goal-meter > span {
+    display: block;
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+  .goal-line.done + .goal-meter > span { background: var(--goal-done); }
+
+  .goals-section {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 38px;
+  }
+  .goals-title {
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  .goal-form { display: flex; flex-direction: column; gap: 8px; }
+  .goal-form-row { display: flex; gap: 8px; align-items: stretch; }
+
+  .goal-select {
+    width: 100%;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 10px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .goal-toggle {
+    display: flex;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--paper);
+    flex-shrink: 0;
+  }
+  .goal-metric {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    padding: 0 12px;
+    cursor: pointer;
+  }
+  .goal-metric.on { background: var(--accent-soft); color: var(--ink); }
+
+  .goal-target {
+    flex: 1;
+    min-width: 0;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 10px;
+    outline: none;
+  }
+  .goal-target:focus { border-color: var(--accent); }
+  .goal-target::placeholder { color: #c9c3b6; }
+
+  .goal-add {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .goal-add:active { opacity: 0.85; }
+
+  .goal-note {
+    font-size: 0.8rem;
+    color: var(--ink-soft);
+    text-align: center;
+    margin-top: 10px;
+    min-height: 1em;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .goal-note.show { opacity: 1; }
+
+  .goal-list { margin-top: 14px; }
+  .goal-list:empty { display: none; }
+
+  .goal-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+  }
+  .goal-item .gi-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .goal-item .gi-target { color: var(--ink-soft); margin-left: auto; white-space: nowrap; }
+  .goal-item .gi-del {
+    background: none;
+    border: none;
+    color: #c9c3b6;
+    font-size: 1.05rem;
+    line-height: 1;
+    padding: 2px 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .goal-item .gi-del:hover { color: var(--ink-soft); }
+  .goal-item .gi-del.confirm { color: var(--accent); font-size: 0.8rem; }
+
+  /* Regenbogen einmal um die Blattkante, wenn ein Ziel erreicht ist */
+  .rainbow-ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .sheet { position: relative; }
+  .rainbow-ring.run { opacity: 1; }
 
   .col-labels {
     display: grid;
@@ -688,6 +862,7 @@
   <div class="date" id="dateBig"></div>
   <div class="date-sub" id="dateSub"></div>
   <div class="unit-hint" id="unitHint"></div>
+  <div class="goal-board" id="goalBoard"></div>
 
   <div class="sheet-body">
     <div class="col-labels">
@@ -707,6 +882,8 @@
     <button class="finish-btn" id="finishBtn" type="button">Einheit abschlie&szlig;en</button>
     <div class="empty-hint" id="emptyHint">Noch nichts eingetragen.</div>
   </div>
+
+  <svg class="rainbow-ring" id="rainbowRing" aria-hidden="true" focusable="false"></svg>
 </div>
 
 <div class="chain-section">
@@ -715,6 +892,23 @@
 </div>
 
 <div class="archive" id="archive"></div>
+
+<div class="goals-section">
+  <div class="goals-title">Ziele</div>
+  <div class="goal-form" id="goalForm">
+    <select class="goal-select" id="goalExercise" aria-label="&Uuml;bung"></select>
+    <div class="goal-form-row">
+      <div class="goal-toggle" id="goalMetric" role="group" aria-label="Einheit">
+        <button type="button" class="goal-metric on" data-metric="weight">kg</button>
+        <button type="button" class="goal-metric" data-metric="reps">Wdh.</button>
+      </div>
+      <input class="goal-target" id="goalTarget" type="text" inputmode="decimal" aria-label="Zielwert" placeholder="Ziel">
+      <button class="goal-add" id="goalAdd" type="button">setzen</button>
+    </div>
+  </div>
+  <div class="goal-note" id="goalNote"></div>
+  <div class="goal-list" id="goalList"></div>
+</div>
 
 <div class="io-bar">
   <button class="io-toggle" id="ioToggle" type="button"
@@ -1286,6 +1480,8 @@
         renderArchive();
         renderChain();
         updateUnitHint();
+        renderGoalBoard();
+        renderGoalSetup();
       }, prefersReducedMotion() ? 0 : 290);
     });
 
@@ -1590,8 +1786,12 @@
     // Falls gerade ein vergangener Tag angesehen wird: das Blatt gehoert nach heute.
     viewKey = todayK;
 
+    var zielErreicht = markGoalsReached(rows);
+    renderGoalBoard();
+    renderGoalSetup();
+
     finishBtn.disabled = true;
-    tearAndFall(function () {
+    var abreissen = function () { tearAndFall(function () {
       finishBtn.disabled = false;
       setTimeout(function () {
         window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
@@ -1600,7 +1800,8 @@
         void sheet.offsetWidth;
         sheet.classList.add("entering");
       }, 550);
-    });
+    }); };
+    if (zielErreicht) playRainbow(abreissen); else abreissen();
   }, guardSheetNotEmpty);
 
   // ---------- Export ----------
@@ -1624,7 +1825,8 @@
 
   document.getElementById("exportJson").addEventListener("click", function () {
     saveDraft();
-    download("kraft-ruhe-export.json", JSON.stringify(entries, null, 2), "application/json");
+    download("kraft-ruhe-export.json",
+      JSON.stringify({ entries: entries, goals: goals }, null, 2), "application/json");
   });
 
   document.getElementById("exportCsv").addEventListener("click", function () {
@@ -1733,13 +1935,21 @@
       showNote("Die Datei liess sich nicht lesen.");
       return;
     }
-    if (!looksLikeEntries(parsed)) {
+    // Neuere Dateien tragen Tage und Ziele getrennt, aeltere bestanden nur
+    // aus den Tagen selbst - beide Formen werden angenommen.
+    var rohTage = parsed, rohZiele = null;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) &&
+        parsed.entries && looksLikeEntries(parsed.entries)) {
+      rohTage = parsed.entries;
+      rohZiele = Array.isArray(parsed.goals) ? parsed.goals : null;
+    }
+    if (!looksLikeEntries(rohTage)) {
       showNote("Das sieht nicht nach einem Kraft-und-Ruhe-Export aus.");
       return;
     }
 
     // Alte Exporte durchlaufen dieselbe Umstellung wie gespeicherte Daten.
-    var incoming = ensureIds(migrate(parsed, false), false);
+    var incoming = ensureIds(migrate(rohTage, false), false);
     var added = mergeEntries(incoming);
 
     if (!added) {
@@ -1747,11 +1957,29 @@
       return;
     }
 
+    if (rohZiele) {
+      var neueZiele = 0;
+      rohZiele.forEach(function (g) {
+        if (!g || !g.exercise || !g.metric) return;
+        var doppelt = goals.some(function (x) {
+          return x.exercise.toLowerCase() === String(g.exercise).toLowerCase() && x.metric === g.metric;
+        });
+        if (doppelt) return;
+        goals.push({ id: g.id || makeId(), exercise: String(g.exercise),
+                     metric: g.metric === "reps" ? "reps" : "weight",
+                     target: num(g.target) || 0, reachedOn: g.reachedOn || null });
+        neueZiele++;
+      });
+      if (neueZiele) saveGoals(goals);
+    }
+
     saveEntries(entries);
     invalidateExerciseNames();
     loadDraftIntoSheet();
     renderChain();
     renderArchive();
+    renderGoalBoard();
+    renderGoalSetup();
     showNote(added === 1 ? "1 Einheit übernommen." : added + " Einheiten übernommen.");
   }
 
@@ -2109,11 +2337,260 @@
     renderChart(statsCurrent.history, hatGewicht ? "weight" : "reps", hatGewicht ? "kg" : "×");
   });
 
+  // ---------- Ziele ----------
+
+  var GOALS_KEY = "kraftRuhe.goals";
+
+  var goalBoard = document.getElementById("goalBoard");
+  var goalExercise = document.getElementById("goalExercise");
+  var goalTarget = document.getElementById("goalTarget");
+  var goalAdd = document.getElementById("goalAdd");
+  var goalMetricBox = document.getElementById("goalMetric");
+  var goalNote = document.getElementById("goalNote");
+  var goalList = document.getElementById("goalList");
+  var rainbowRing = document.getElementById("rainbowRing");
+  var goalNoteTimer = null;
+
+  function loadGoals() {
+    try {
+      var raw = localStorage.getItem(GOALS_KEY);
+      var list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) { return []; }
+  }
+
+  function saveGoals(list) {
+    try { localStorage.setItem(GOALS_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+
+  var goals = loadGoals();
+
+  function showGoalNote(text) {
+    goalNote.textContent = text;
+    goalNote.classList.add("show");
+    clearTimeout(goalNoteTimer);
+    goalNoteTimer = setTimeout(function () { goalNote.classList.remove("show"); }, 5000);
+  }
+
+  function metricLabel(m) { return m === "weight" ? "kg" : "×"; }
+
+  // Wie weit die letzte Einheit mit dieser Uebung gekommen ist.
+  function goalProgress(goal) {
+    var hist = collectExerciseHistory(goal.exercise);
+    if (!hist.length) return { last: null, pct: 0 };
+    var letzterTag = hist[hist.length - 1].day;
+    var letzteZeit = hist[hist.length - 1].time;
+    var best = null;
+    hist.forEach(function (h) {
+      if (h.day !== letzterTag || h.time !== letzteZeit) return;
+      var v = num(goal.metric === "weight" ? h.weight : h.reps);
+      if (v !== null && (best === null || v > best)) best = v;
+    });
+    var pct = (best === null || !goal.target) ? 0 : Math.max(0, Math.min(1, best / goal.target));
+    return { last: best, pct: pct };
+  }
+
+  function renderGoalBoard() {
+    goalBoard.innerHTML = "";
+    goals.forEach(function (g) {
+      var p = goalProgress(g);
+      var erreicht = !!g.reachedOn;
+
+      var line = document.createElement("div");
+      line.className = "goal-line" + (erreicht ? " done" : "");
+
+      var name = document.createElement("span");
+      name.className = "gl-name";
+      name.textContent = g.exercise;
+
+      var rest = document.createElement("span");
+      rest.className = "gl-rest";
+      if (erreicht) {
+        rest.textContent = "Ziel " + fmt(g.target) + " " + metricLabel(g.metric) + " · erreicht";
+      } else if (p.last === null) {
+        rest.textContent = "Ziel " + fmt(g.target) + " " + metricLabel(g.metric) + " · noch nichts festgehalten";
+      } else {
+        rest.textContent = "zuletzt " + fmt(p.last) + " von " + fmt(g.target) + " " + metricLabel(g.metric);
+      }
+
+      line.appendChild(name);
+      line.appendChild(rest);
+      goalBoard.appendChild(line);
+
+      var meter = document.createElement("div");
+      meter.className = "goal-meter";
+      var fill = document.createElement("span");
+      fill.style.width = Math.round((erreicht ? 1 : p.pct) * 100) + "%";
+      meter.appendChild(fill);
+      goalBoard.appendChild(meter);
+    });
+  }
+
+  function renderGoalSetup() {
+    var namen = loadExerciseNames();
+
+    goalExercise.innerHTML = "";
+    if (!namen.length) {
+      var leer = document.createElement("option");
+      leer.textContent = "noch keine Übung festgehalten";
+      goalExercise.appendChild(leer);
+      goalExercise.disabled = true;
+      goalAdd.disabled = true;
+      goalTarget.disabled = true;
+    } else {
+      goalExercise.disabled = false;
+      goalAdd.disabled = false;
+      goalTarget.disabled = false;
+      namen.forEach(function (n) {
+        var opt = document.createElement("option");
+        opt.value = n;
+        opt.textContent = n;
+        goalExercise.appendChild(opt);
+      });
+    }
+
+    goalList.innerHTML = "";
+    goals.forEach(function (g) {
+      var item = document.createElement("div");
+      item.className = "goal-item";
+
+      var text = document.createElement("span");
+      text.className = "gi-text";
+      text.textContent = g.exercise;
+
+      var target = document.createElement("span");
+      target.className = "gi-target";
+      target.textContent = fmt(g.target) + " " + metricLabel(g.metric) + (g.reachedOn ? " · erreicht" : "");
+
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "gi-del";
+      del.textContent = "×";
+      del.setAttribute("aria-label", "Ziel entfernen");
+      armConfirm(del, "entfernen?", function () {
+        goals = goals.filter(function (x) { return x.id !== g.id; });
+        saveGoals(goals);
+        renderGoalSetup();
+        renderGoalBoard();
+      });
+
+      item.appendChild(text);
+      item.appendChild(target);
+      item.appendChild(del);
+      goalList.appendChild(item);
+    });
+  }
+
+  goalMetricBox.addEventListener("click", function (e) {
+    var btn = e.target.closest(".goal-metric");
+    if (!btn) return;
+    goalMetricBox.querySelectorAll(".goal-metric").forEach(function (b) {
+      b.classList.toggle("on", b === btn);
+    });
+  });
+
+  goalAdd.addEventListener("click", function () {
+    var name = goalExercise.value;
+    var metric = goalMetricBox.querySelector(".goal-metric.on").dataset.metric;
+    var wert = num(normalizeNumberInput(goalTarget.value));
+
+    if (!name) { showGoalNote("Erst eine Übung wählen."); return; }
+    if (wert === null || wert <= 0) { showGoalNote("Bitte einen Zielwert eintragen."); return; }
+
+    var schonDa = goals.some(function (g) {
+      return g.exercise.toLowerCase() === name.toLowerCase() && g.metric === metric;
+    });
+    if (schonDa) { showGoalNote("Dafür gibt es schon ein Ziel."); return; }
+
+    goals.push({ id: makeId(), exercise: name, metric: metric, target: wert, reachedOn: null });
+    saveGoals(goals);
+    goalTarget.value = "";
+    renderGoalSetup();
+    renderGoalBoard();
+    showGoalNote("Ziel gesetzt.");
+  });
+
+  // Prueft die gerade abgeschlossenen Zeilen gegen die offenen Ziele.
+  function markGoalsReached(rows) {
+    var neuErreicht = false;
+    goals.forEach(function (g) {
+      if (g.reachedOn) return;
+      var best = null;
+      rows.forEach(function (r) {
+        if ((r.exercise || "").trim().toLowerCase() !== g.exercise.trim().toLowerCase()) return;
+        var v = num(g.metric === "weight" ? r.weight : r.reps);
+        if (v !== null && (best === null || v > best)) best = v;
+      });
+      if (best !== null && best >= g.target) {
+        g.reachedOn = todayK;
+        neuErreicht = true;
+      }
+    });
+    if (neuErreicht) saveGoals(goals);
+    return neuErreicht;
+  }
+
+  // Ein Regenbogen einmal um die Blattkante, bevor es abgerissen wird.
+  function playRainbow(done) {
+    if (prefersReducedMotion()) { done(); return; }
+
+    var r = sheet.getBoundingClientRect();
+    var w = Math.round(r.width), h = Math.round(r.height);
+    if (!w || !h) { done(); return; }
+
+    var rad = 18, sw = 4, inset = sw / 2;
+    var perim = 2 * (w - 2 * rad) + 2 * (h - 2 * rad) + 2 * Math.PI * rad;
+
+    rainbowRing.setAttribute("viewBox", "0 0 " + w + " " + h);
+    while (rainbowRing.firstChild) rainbowRing.removeChild(rainbowRing.firstChild);
+
+    var defs = svgEl("defs", {});
+    var grad = svgEl("linearGradient", { id: "rrGrad", x1: "0", y1: "0", x2: "1", y2: "1" });
+    [["0%", "#e2564f"], ["16%", "#e08a3c"], ["32%", "#d8c13f"], ["48%", "#5aa564"],
+     ["64%", "#4aa0b5"], ["80%", "#5566c4"], ["100%", "#9a5fb5"]].forEach(function (s) {
+      grad.appendChild(svgEl("stop", { offset: s[0], "stop-color": s[1] }));
+    });
+    defs.appendChild(grad);
+    rainbowRing.appendChild(defs);
+
+    function bahn(breite, deckkraft) {
+      return svgEl("rect", {
+        x: inset, y: inset, width: w - sw, height: h - sw,
+        rx: rad - inset, ry: rad - inset,
+        fill: "none", stroke: "url(#rrGrad)", "stroke-width": breite,
+        "stroke-linecap": "round", opacity: deckkraft, class: "rr-track",
+        "stroke-dasharray": (perim * 0.45).toFixed(1) + " " + (perim * 0.55).toFixed(1),
+        "stroke-dashoffset": 0
+      });
+    }
+    var breit = bahn(9, 0.25);
+    var schmal = bahn(3.5, 1);
+    rainbowRing.appendChild(breit);
+    rainbowRing.appendChild(schmal);
+    rainbowRing.classList.add("run");
+
+    var DAUER = 1600;
+    [breit, schmal].forEach(function (el) {
+      if (el.animate) {
+        el.animate([{ strokeDashoffset: 0 }, { strokeDashoffset: -perim }],
+                   { duration: DAUER, easing: "linear" });
+      }
+    });
+
+    setTimeout(function () {
+      rainbowRing.classList.remove("run");
+      while (rainbowRing.firstChild) rainbowRing.removeChild(rainbowRing.firstChild);
+      done();
+    }, DAUER + 120);
+  }
+
   // ---------- Start ----------
 
   loadDraftIntoSheet();
   renderChain();
   renderArchive();
+  renderGoalBoard();
+  renderGoalSetup();
 })();
 </script>
 
